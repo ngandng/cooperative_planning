@@ -1,4 +1,5 @@
 import numpy as np
+from ORTools import *
 
 class DifferentialDriveRobot:
     def __init__(self, x, y, theta, vmax, sr):
@@ -7,20 +8,32 @@ class DifferentialDriveRobot:
         self.z = 0
         self.theta = theta
 
+        self.vel = []   # current velocity
         self.vmax = vmax
         
         self.sensing_range = sr
-        self.task = np.empty((1,3))
+        self.task = np.empty((0, 5))
 
     def update_position(self, v, omega, dt, env):
         self.x += v * np.cos(self.theta) * dt
         self.y += v * np.sin(self.theta) * dt
         self.theta += omega * dt
 
+        # update infor about velocity
+        self.vel = [v, omega, 0]
         self.sense_new_task(env)
+
+    def position(self):
+        return [self.x, self.y, 0]
+    
+    def update_vel(self, new_vel):
+        self.vel = new_vel
         
     def add_task(self, new_task):
-        # if(new_task):
+        # if len(self.task) == 1 and np.all(self.task == 0):
+        #     self.task = new_task
+        # else:
+        new_task = np.array(new_task).reshape(1, 5)
         self.task = np.vstack([self.task, new_task])
         
     def sense_new_task(self, env):
@@ -44,16 +57,88 @@ class DifferentialDriveRobot:
             x = self.x + dis * np.cos(self.theta+sen_angle)
             y = self.y + dis * np.sin(self.theta+sen_angle)
 
-            task = np.array([x, y, z])
+            task = np.array([x, y, z, 0, 0])
 
             # print('Add task at location ',x,y,z)
-            self.add_task(task)
+            self.add_task(task)   
 
+    def calculate_priority(self):
+        p = np.array([self.x, self.y, self.z])
+        v = np.array(self.vel)
 
-class Drone:
-    def __init__(self,maximum_energy):
-        # the maximum distance that the drone can travel due the batery constraint
-        self.C = maximum_energy     
+        if len(self.task)==0:
+            return
+
+        points = []
+        for task in self.task:
+            points.append([task[0], task[1], task[2]])
+        
+        # Calculate unit vector in the opposite direction of velocity
+        v_magnitude = np.linalg.norm(v)
+        if v_magnitude == 0:
+            raise ValueError("Velocity magnitude cannot be zero.")
+        u_opp = -v / v_magnitude
+        
+        # Calculate projections onto the opposite direction vector
+        projections = [(point, np.dot(np.array(point) - p, u_opp)) for point in points]
+        
+        # Calculate priority for each point
+        priorities = []
+        for point, proj in projections:
+            dist = np.linalg.norm(np.array(point) - p)
+            priority = proj * dist  # You can adjust this formula as needed
+            priorities.append((point, priority))
+        
+        # Extract the priority values
+        priority_values = np.array([priority for _, priority in priorities])
+        
+        # Step 1: Adjust priority values to make them positive
+        min_priority = np.min(priority_values)
+        adjustment = abs(min_priority) + 1  # Add 1 to ensure all values become positive
+        
+        adjusted_priorities = priority_values + adjustment
+        
+        # Step 2: Normalize the adjusted priority values
+        total = np.sum(adjusted_priorities)
+        
+        # Step 3: Calculate probabilities
+        probabilities = adjusted_priorities / total
+        
+        # Combine points with their probabilities
+        points_with_probabilities = [(point[0], point[1], point[2], priority, prob) for (point, priority), prob in zip(priorities, probabilities)]
+        points_with_probabilities = np.array(points_with_probabilities)
+        
+        self.task = points_with_probabilities
+
+        # print("Updated value for task set", self.task.shape)
+
+    def plan_for_uav(self, uav_vel, uav_battery):
+
+        if self.task.size == 0:
+            return []  # No tasks to process, return an empty list
+        
+        traversable_len = uav_battery
+   
+        route = np.array([self.x, self.y, self.z])
+        current_node = route[-1]
+
+        while traversable_len > 0:
+            next_node, pos = find_best_node(current_node, traversable_len, self.task, self.position(), self.vel, uav_vel)
+
+            if next_node is not None and pos is not None:
+                # route = route + next_node
+                route = np.vstack([route, next_node])
+
+                # print('Test shape', current_node.shape, next_node.shape)
+                # update some value
+                traversable_len -= np.linalg.norm(current_node-next_node)
+                current_node = route[-1]
+
+                self.task = np.delete(self.task, pos, axis=0)
+            else:
+                break
+
+        return route
 
 def calculate_control(robot, goal, Kp_linear, Kp_angular):
     # Calculate the error in position
@@ -79,50 +164,42 @@ def calculate_control(robot, goal, Kp_linear, Kp_angular):
     
     return v, omega
 
-def calculate_priority(robot_position, velocity, points):
-    p = np.array(robot_position)
-    v = np.array(velocity)
+def find_best_node(current_node, traversable_len, task_set, robot_position, robot_vel, uav_vel):
+
+    # argmax        probabilites(q)
+    # subject to    distance(current_node,q)+distance(q,new_robot) < traversable_len
+
+    # first find the new_robot position for each point q
+    t_total = np.zeros(len(task_set))
+
+    for i in range(len(task_set)):
+        q = [task_set[i][0],task_set[i][1],task_set[i][2]]
+        l1 = np.linalg.norm(q - current_node)
+        t1 = l1/uav_vel
+
+        t2 = optimize2(q, l1, t1, robot_position, robot_vel, uav_vel, traversable_len)
+        
+        t_total[i] = t1+t2
     
-    # Calculate unit vector in the opposite direction of velocity
-    v_magnitude = np.linalg.norm(v)
-    if v_magnitude == 0:
-        raise ValueError("Velocity magnitude cannot be zero.")
-    u_opp = -v / v_magnitude
-    
-    # Calculate projections onto the opposite direction vector
-    projections = [(point, np.dot(np.array(point) - p, u_opp)) for point in points]
-    
-    # Calculate priority for each point
-    priorities = []
-    for point, proj in projections:
-        dist = np.linalg.norm(np.array(point) - p)
-        priority = proj * dist  # You can adjust this formula as needed
-        priorities.append((point, priority))
-    
-    # Extract the priority values
-    priority_values = np.array([priority for _, priority in priorities])
-    
-    # Step 1: Adjust priority values to make them positive
-    min_priority = np.min(priority_values)
-    adjustment = abs(min_priority) + 1  # Add 1 to ensure all values become positive
-    
-    adjusted_priorities = priority_values + adjustment
-    
-    # Step 2: Normalize the adjusted priority values
-    total = np.sum(adjusted_priorities)
-    
-    # Step 3: Calculate probabilities
-    probabilities = adjusted_priorities / total
-    
-    # Combine points with their probabilities
-    points_with_probabilities = [(point, priority, prob) for (point, priority), prob in zip(priorities, probabilities)]
-    
-    return points_with_probabilities
+    # after that, we can apply optimization solver to find best q
+    q_, position = optimize1(task_set, current_node, robot_position, robot_vel, t_total, traversable_len)
+
+    print('Check q_', q_)
+
+    if q_ is None:
+        return None, None
+
+    q_ = np.array(q_)
+
+    return q_, position
+
+    # just need to return the array of position [x,y,z]
+
 
 # Example usage:
-robot_position = (1, 1)
-velocity = (1, 0)
-points = [(4, 5), (2, 3), (0, 0), (-3, 1), (-2, 2)]
+# robot_position = (1, 1)
+# velocity = (1, 0)
+# points = [(4, 5), (2, 3), (0, 0), (-3, 1), (-2, 2)]
 
-result = calculate_priority(robot_position, velocity, points)
-print('points with probabilities',result)
+# result = calculate_priority(robot_position, velocity, points)
+# print('points with probabilities',result)

@@ -19,6 +19,7 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 from mpl_toolkits.mplot3d import Axes3D
 
 from robot import *
+from uav import *
 
 # Define the environment
 X_MIN = 0; X_MAX = 100
@@ -34,8 +35,12 @@ dt = 1                      # Time step
 max_steps = 100              # Maximum number of simulation steps
 robot_radius = 0.2          # Radius of the robot circle
 robot_sensing_range = 20     # 
+robot_vmax = 5
 
 uav_max_range = 20          # maximum traveling distance of each uav
+uav_min_range = 5           # minimum remaining battery that uav can consider taking new route
+uav_avg_vel = 10            # uav average velocity
+
 
 class Environment:
     def __init__(self):
@@ -47,7 +52,11 @@ class Environment:
         self.zmin = Z_MIN
 
 def simulate_robot(start, goal, Kp_linear, Kp_angular, dt, max_steps):
-    robot = DifferentialDriveRobot(start[0], start[1], start[2], vmax=5, sr=robot_sensing_range)
+    robot = DifferentialDriveRobot(start[0], start[1], start[2], vmax=robot_vmax, sr=robot_sensing_range)
+
+    # uav1 = UAV(robot.position, uav_avg_vel, uav_max_range)
+    # uav2 = UAV(robot.position, uav_avg_vel, uav_max_range)
+    # uav3 = UAV(robot.position, uav_avg_vel, uav_max_range)
 
     trajectory = [(robot.x, robot.y)]
     task_list = []
@@ -60,11 +69,13 @@ def simulate_robot(start, goal, Kp_linear, Kp_angular, dt, max_steps):
         # update new position and sense for new tasks
         robot.update_position(v, omega, dt, env)
 
-        task_info = calculate_priority([robot.x, robot.y, robot.z], [v, omega, 0], robot.task)
+        robot.calculate_priority()
+        task_info = robot.task
 
-        print('LOGGING OF STEP ',_i)
-        for i in range(len(task_info)):
-            print('Task ', i, ':: location ', task_info[i][0], ' priority value ', task_info[i][1], ' prob ', task_info[i][2])
+        # if not task_info is None:
+        #     print('LOGGING OF STEP ',_i)
+        #     for i in range(len(task_info)):
+        #         print('Task ', i, ':: location ', task_info[i][0],task_info[i][1],task_info[i][2],' priority value ', task_info[i][3],' prob ', task_info[i][4])
         
         trajectory.append((robot.x, robot.y))
 
@@ -88,6 +99,10 @@ ax = fig.add_subplot(111, projection='3d')
 ax.set_xlim((min(trajectory[:, 0]) - 1, max(trajectory[:, 0]) + 1))
 ax.set_ylim((min(trajectory[:, 1]) - 1, max(trajectory[:, 1]) + 1))
 ax.set_zlim(0, 30)
+
+# ax.azim = 0
+# ax.dist = 10
+# ax.elev = -90
 
 line, = ax.plot([], [], [], 'b-', label='Robot Trajectory')
 start_marker, = ax.plot([], [], [], 'bo', label='Start')
@@ -127,7 +142,7 @@ def update_frame(frame):
 
     if frame < len(task_list):
         tasks = task_list[frame]
-        print('task_list[frame].shape ', tasks.shape)
+        # print('task_list[frame].shape ', tasks.shape)
         if len(tasks) > 0:
             tx = tasks[:, 0]
             ty = tasks[:, 1]
