@@ -10,7 +10,7 @@ Simulation:
     - Drone:
             - Each drone query it's route from drone
             - Moving to task set by the route
-            - Comeback to robot to charge and get new mission            
+            - Comeback to robot to charge and get new mission
 """
 
 import numpy as np
@@ -19,57 +19,56 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 from mpl_toolkits.mplot3d import Axes3D
 
 from robot import *
-from uav import *
-
-# Define the environment
-X_MIN = 0; X_MAX = 100
-Y_MIN = 0; Y_MAX = 100
-Z_MIN = 0; Z_MAX = 30
-
-# Parameters
-start = (0, 0, np.pi/4)     # Starting position (x, y, theta)
-goal = (200, 200)             # Goal position (x, y)
-Kp_linear = 1.0             # Proportional gain for linear velocity
-Kp_angular = 2.0            # Proportional gain for angular velocity
-dt = 1                      # Time step
-max_steps = 100              # Maximum number of simulation steps
-robot_radius = 0.2          # Radius of the robot circle
-robot_sensing_range = 20     # 
-robot_vmax = 5
-
-uav_max_range = 20          # maximum traveling distance of each uav
-uav_min_range = 5           # minimum remaining battery that uav can consider taking new route
-uav_avg_vel = 10            # uav average velocity
-
-
-class Environment:
-    def __init__(self):
-        self.xmax = X_MAX
-        self.xmin = X_MIN
-        self.ymax = Y_MAX
-        self.ymin = Y_MIN
-        self.zmax = Z_MAX
-        self.zmin = Z_MIN
+from drone import *
+from config import *
+from plot import *
 
 def simulate_robot(start, goal, Kp_linear, Kp_angular, dt, max_steps):
     robot = DifferentialDriveRobot(start[0], start[1], start[2], vmax=robot_vmax, sr=robot_sensing_range)
-
-    # uav1 = UAV(robot.position, uav_avg_vel, uav_max_range)
-    # uav2 = UAV(robot.position, uav_avg_vel, uav_max_range)
-    # uav3 = UAV(robot.position, uav_avg_vel, uav_max_range)
 
     trajectory = [(robot.x, robot.y)]
     task_list = []
 
     env = Environment()
 
+    drone = [Drone(i, init_pos=[0, 0, 0], average_vel=1.0, battery_limit=uav_max_range) for i in range(num_drones)]
+
     for _i in range(max_steps):
         v, omega = calculate_control(robot, goal, Kp_linear, Kp_angular)
 
         # update new position and sense for new tasks
         robot.update_position(v, omega, dt, env)
+            
+        for _drone in drone:
 
-        robot.calculate_priority()
+            if _drone.state == DroneState.COMEBACK:
+                # if drone is comming back, send robot position for drone
+                _drone.move_to_pos(robot.get_position())
+                if np.linalg.norm(_drone.position-robot.get_position()) < epsilon:
+                    _drone.state = DroneState.CHARGING
+
+            if _drone.state == DroneState.CHARGING:
+                _drone.battery = uav_max_range
+
+                # wait for charge until drone full of battery
+                if _drone.check_battery == uav_max_range:
+                    _drone.state = DroneState.WAITING
+
+            # when drone is waiting
+            if _drone.state == DroneState.WAITING:
+                robot.calculate_priority()
+                plan = robot.plan_for_uav(_drone.vel,_drone.check_battery())
+                _drone.position = robot.get_position()
+
+                if plan:
+                    _drone.set_route(plan)
+                    print(f"Set a new plan for the drone {_drone.index}: {plan}")
+                    _drone.state = DroneState.MOVING
+
+            # when drone state is moving
+            if _drone.state == DroneState.MOVING:
+                _drone.move()
+
         task_info = robot.task
 
         # if not task_info is None:
@@ -78,11 +77,9 @@ def simulate_robot(start, goal, Kp_linear, Kp_angular, dt, max_steps):
         #         print('Task ', i, ':: location ', task_info[i][0],task_info[i][1],task_info[i][2],' priority value ', task_info[i][3],' prob ', task_info[i][4])
         
         trajectory.append((robot.x, robot.y))
-
         task_list.append(robot.task)
         
-        # Stop if the robot is close enough to the goal
-        if np.linalg.norm([robot.x - goal[0], robot.y - goal[1]]) < 0.01:
+        if np.linalg.norm([robot.x - goal[0], robot.y - goal[1]]) < epsilon:
             break
     
     return trajectory, task_list
@@ -90,72 +87,6 @@ def simulate_robot(start, goal, Kp_linear, Kp_angular, dt, max_steps):
 # Simulate the robot
 trajectory, task_list = simulate_robot(start, goal, Kp_linear, Kp_angular, dt, max_steps)
 
-# Plotting the trajectory as an animation
-trajectory = np.array(trajectory)
-
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-
-ax.set_xlim((min(trajectory[:, 0]) - 1, max(trajectory[:, 0]) + 1))
-ax.set_ylim((min(trajectory[:, 1]) - 1, max(trajectory[:, 1]) + 1))
-ax.set_zlim(0, 30)
-
-# ax.azim = 0
-# ax.dist = 10
-# ax.elev = -90
-
-line, = ax.plot([], [], [], 'b-', label='Robot Trajectory')
-start_marker, = ax.plot([], [], [], 'bo', label='Start')
-goal_marker, = ax.plot([], [], [], 'ro', label='Goal')
-robot_circle, = ax.plot([], [], [], 'yo', label='Robot', markersize=20)
-robot_direction, = ax.plot([], [], [], 'r-')
-task_scatter = ax.scatter([], [], [], c='g', marker='o', label='Task', s=50)
-
-ax.set_xlabel('X')
-ax.set_ylabel('Y')
-ax.set_zlabel('Z')
-ax.legend(loc='upper left')
-ax.set_title('Trajectory of Differential Drive Robot')
-ax.grid(True)
-
-def init():
-    line.set_data_3d([], [], [])
-    start_marker.set_data_3d([start[0]], [start[1]], [0])
-    goal_marker.set_data_3d([goal[0]], [goal[1]], [0])
-    robot_circle.set_data_3d([start[0]], [start[1]], [0])
-    robot_direction.set_data_3d([], [], [])
-    task_scatter._offsets3d = ([], [], [])
-
-    return line, start_marker, goal_marker, robot_circle, robot_direction, task_scatter
-
-def update_frame(frame):
-    line.set_data_3d(trajectory[:frame, 0], trajectory[:frame, 1], np.zeros(frame))
-    robot_circle.set_data_3d([trajectory[frame, 0]], [trajectory[frame, 1]], [0])
-
-    # Calculate the direction line based on robot's theta
-    direction_length = 10.0
-    direction_x = trajectory[frame, 0] + direction_length * np.cos(start[2])
-    direction_y = trajectory[frame, 1] + direction_length * np.sin(start[2])
-    robot_direction.set_data_3d([trajectory[frame, 0], direction_x],
-                                [trajectory[frame, 1], direction_y],
-                                [0, 0])
-
-    if frame < len(task_list):
-        tasks = task_list[frame]
-        # print('task_list[frame].shape ', tasks.shape)
-        if len(tasks) > 0:
-            tx = tasks[:, 0]
-            ty = tasks[:, 1]
-            tz = tasks[:, 2]
-            task_scatter._offsets3d = (tx,ty,tz)
-        else:
-            task_scatter._offsets3d = ([], [], [])
-
-    return line, start_marker, goal_marker, robot_circle, robot_direction, task_scatter
-
-ani = FuncAnimation(fig, update_frame, frames=len(trajectory), init_func=init, blit=True, repeat=False)
-
-# Save the animation as a GIF
-ani.save('robot_trajectory.gif', writer=PillowWriter(fps=10))
-
-plt.show()
+# Plotting the trajectory as an animation using the TrajectoryPlotter class
+plotter = TrajectoryPlotter(trajectory, task_list, start, goal)
+plotter.animate('robot_trajectory.gif', fps=10)

@@ -1,17 +1,23 @@
 import numpy as np
+from config import *
 from ORTools import *
 
 class DifferentialDriveRobot:
     def __init__(self, x, y, theta, vmax, sr):
+
+        # robot state
         self.x = x
         self.y = y
         self.z = 0
         self.theta = theta
 
         self.vel = []   # current velocity
-        self.vmax = vmax
         
+        # robot parameters
+        self.vmax = vmax
         self.sensing_range = sr
+
+        # avalable tasks
         self.task = np.empty((0, 5))
 
     def update_position(self, v, omega, dt, env):
@@ -23,7 +29,7 @@ class DifferentialDriveRobot:
         self.vel = [v, omega, 0]
         self.sense_new_task(env)
 
-    def position(self):
+    def get_position(self):
         return [self.x, self.y, 0]
     
     def update_vel(self, new_vel):
@@ -113,25 +119,20 @@ class DifferentialDriveRobot:
         # print("Updated value for task set", self.task.shape)
 
     def plan_for_uav(self, uav_vel, uav_battery):
-
         if self.task.size == 0:
             return []  # No tasks to process, return an empty list
         
         traversable_len = uav_battery
-   
-        route = np.array([self.x, self.y, self.z])
+        route = [np.array([self.x, self.y, self.z])]
         current_node = route[-1]
 
-        while traversable_len > 0:
-            next_node, pos = find_best_node(current_node, traversable_len, self.task, self.position(), self.vel, uav_vel)
+        while traversable_len > 0 and len(self.task) > 0:
+            next_node, pos = find_best_node(current_node, traversable_len, self.task, self.get_position(), self.vel, uav_vel)
 
             if next_node is not None and pos is not None:
-                # route = route + next_node
-                route = np.vstack([route, next_node])
+                route.append(next_node)
 
-                # print('Test shape', current_node.shape, next_node.shape)
-                # update some value
-                traversable_len -= np.linalg.norm(current_node-next_node)
+                traversable_len -= np.linalg.norm(current_node - next_node)
                 current_node = route[-1]
 
                 self.task = np.delete(self.task, pos, axis=0)

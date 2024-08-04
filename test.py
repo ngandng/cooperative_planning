@@ -6,7 +6,7 @@ env = Environment()
 
 def test_robot_initialization():
     robot = DifferentialDriveRobot(x=0, y=0, theta=0, vmax=1.0, sr=5.0)
-    assert robot.x == 0
+    assert robot.x == 0         # assert raise an AssertionError when condition returns false
     assert robot.y == 0
     assert robot.theta == 0
     assert robot.vmax == 1.0
