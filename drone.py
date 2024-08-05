@@ -32,36 +32,51 @@ class Drone:
     def set_route(self, route):
         self.route = route
 
+    def charge(self, battery_limit):
+        self.battery = battery_limit
+
     def has_tasks(self):
         return bool(self.route)
 
     def move_to_pos(self, target):
         direction = np.array(target) - np.array(self.position)
         distance = np.linalg.norm(direction)
+
+        velocity = self.vel
+
         if distance > 0:
             direction = direction / distance
-            move_vec = direction * self.vel
+            while distance < velocity:
+                velocity = velocity*0.9
+
+            move_vec = direction * velocity
+            
             self.position = self.position + move_vec
             self.battery -= np.linalg.norm(move_vec)  # Decrease battery with movement
 
     def move(self):
-        if not self.current_target:
+        if self.current_target is None:
             self.current_target = self.route[0]
 
             del self.route[0]
 
         # check whether drone reach the current goal
-        if np.linalg.norm(self.position-self.current_target) < epsilon:
+        dis2tar = np.linalg.norm(self.position-self.current_target)
+        # print('Drone ', self.index, 'checking distance to target ', dis2tar)
+        if dis2tar < epsilon:
             if len(self.route)>=1:
                 self.current_target = self.route[0]
                 del self.route[0]
             else:
                 self.current_target = None
+                print('[annouce] drone', self.index, 'finished the mission and now comming back')
                 self.state = DroneState.COMEBACK
 
         # update position
-        if self.current_target:
+        if self.current_target is not None:
             self.move_to_pos(self.current_target)
+        
+        return self.current_target
 
 # # Example usage
 # start = (0, 0, np.pi/4)     # Starting position (x, y, theta)

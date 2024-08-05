@@ -1,15 +1,15 @@
-
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, PillowWriter
 from mpl_toolkits.mplot3d import Axes3D
 
 class TrajectoryPlotter:
-    def __init__(self, trajectory, task_list, start, goal):
+    def __init__(self, trajectory, task_list, start, goal, finished_task):
         self.trajectory = np.array(trajectory)
         self.task_list = task_list
         self.start = start
         self.goal = goal
+        self.finished = finished_task
 
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(111, projection='3d')
@@ -18,7 +18,10 @@ class TrajectoryPlotter:
         self.goal_marker, = self.ax.plot([], [], [], 'ro', label='Goal')
         self.robot_circle, = self.ax.plot([], [], [], 'yo', label='Robot', markersize=20)
         self.robot_direction, = self.ax.plot([], [], [], 'r-')
+        
+        # Separate scatter plots for tasks and finished tasks
         self.task_scatter = self.ax.scatter([], [], [], c='g', marker='o', label='Task', s=50)
+        self.finished_scatter = self.ax.scatter([], [], [], c='b', marker='o', label='Finished Task', s=50)
 
         self._init_plot()
 
@@ -39,8 +42,12 @@ class TrajectoryPlotter:
         self.goal_marker.set_data_3d([self.goal[0]], [self.goal[1]], [0])
         self.robot_circle.set_data_3d([self.start[0]], [self.start[1]], [0])
         self.robot_direction.set_data_3d([], [], [])
+        
         self.task_scatter._offsets3d = ([], [], [])
-        return self.line, self.start_marker, self.goal_marker, self.robot_circle, self.robot_direction, self.task_scatter
+        self.finished_scatter._offsets3d = ([], [], [])
+        
+        return (self.line, self.start_marker, self.goal_marker, self.robot_circle, 
+                self.robot_direction, self.task_scatter, self.finished_scatter)
 
     def update_frame(self, frame):
         self.line.set_data_3d(self.trajectory[:frame, 0], self.trajectory[:frame, 1], np.zeros(frame))
@@ -53,6 +60,7 @@ class TrajectoryPlotter:
                                          [self.trajectory[frame, 1], direction_y],
                                          [0, 0])
 
+        # Update task scatter plot
         if frame < len(self.task_list):
             tasks = self.task_list[frame]
             if len(tasks) > 0:
@@ -62,10 +70,23 @@ class TrajectoryPlotter:
                 self.task_scatter._offsets3d = (tx, ty, tz)
             else:
                 self.task_scatter._offsets3d = ([], [], [])
+        
+        # Update finished task scatter plot
+        if frame < len(self.finished):
+            finished_tasks = self.finished[frame]
+            if len(finished_tasks) > 0:
+                ftx = finished_tasks[:, 0]
+                fty = finished_tasks[:, 1]
+                ftz = finished_tasks[:, 2]
+                self.finished_scatter._offsets3d = (ftx, fty, ftz)
+            else:
+                self.finished_scatter._offsets3d = ([], [], [])
 
-        return self.line, self.start_marker, self.goal_marker, self.robot_circle, self.robot_direction, self.task_scatter
+        return (self.line, self.start_marker, self.goal_marker, self.robot_circle, 
+                self.robot_direction, self.task_scatter, self.finished_scatter)
 
     def animate(self, filename='robot_trajectory.gif', fps=10):
-        ani = FuncAnimation(self.fig, self.update_frame, frames=len(self.trajectory), init_func=self.init, blit=True, repeat=False)
+        ani = FuncAnimation(self.fig, self.update_frame, frames=len(self.trajectory), 
+                            init_func=self.init, blit=True, repeat=False)
         ani.save(filename, writer=PillowWriter(fps=fps))
         plt.show()

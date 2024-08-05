@@ -23,16 +23,17 @@ Kp_angular = 2.0            # Proportional gain for angular velocity
 
 dt = 1                      # Time step
 
-max_steps = 100              # Maximum number of simulation steps
+max_steps = 500              # Maximum number of simulation steps
 
 robot_radius = 0.2          # Radius of the robot circle
 robot_sensing_range = 20     # 
 robot_vmax = 5
+robot_vmin = 1
 
-uav_max_range = 20          # maximum traveling distance of each uav
-uav_min_range = 5           # minimum remaining battery that uav can consider taking new route
+uav_max_range = 150          # maximum traveling distance of each uav
+uav_min_range = 10           # minimum remaining battery that uav can consider taking new route
 uav_avg_vel = 10            # uav average velocity
 
-epsilon = 0.05              # allowed distance between robot and goal
+epsilon = 0.5              # allowed distance between robot and goal
 
 num_drones = 3

@@ -54,28 +54,28 @@ def optimize1(task_set, current_node, robot_position, robot_vel, t_total, traver
     status = solver.Solve()
 
     if status == pywraplp.Solver.OPTIMAL:
-        print('Optimal solution found:')
+        # print('[LOG]: Optimal solution found:')
         selected_task = None
         for j in range(num_tasks):
             if x[j].solution_value() > 0:
-                print(f'Task {task_set[j][0],task_set[j][1],task_set[j][2]} is selected with value: {task_set[j][4]}')
+                # print(f'Task {task_set[j][0],task_set[j][1],task_set[j][2]} is selected with value: {task_set[j][4]}')
                 selected_task = task_set[j][:3]
                 break
         return selected_task if selected_task is not None else None, j
     else:
-        print('The optimizer1 does not have an optimal solution.')
+        print('[LOG] WARNING: The optimizer1 does not have an optimal solution.')
         return [], None
 
 
 def optimize2(q, l1, t1, robot_position, robot_vel, uav_vel, traversable_len):
     # Create the solver
-    solver = pywraplp.Solver.CreateSolver("GLOP")
+    solver = pywraplp.Solver.CreateSolver('SCIP')
     if not solver:
-        print("Could not create solver GLOP")
-        return
+        print("Could not create solver SCIP")
+        return None
 
     # Variable
-    t2 = solver.NumVar(0.0000001, solver.infinity(), 't2')
+    t2 = solver.NumVar(0.00001, solver.infinity(), 't2')
 
     # Objective: Minimize t2 * uav_vel
     objective = solver.Objective()
@@ -88,29 +88,21 @@ def optimize2(q, l1, t1, robot_position, robot_vel, uav_vel, traversable_len):
     q_point = np.array(q)
     fixed_part = robot_pos + t1 * robot_velocity
 
-    # Constraint: norm((fixed_part + t2 * robot_velocity) - q) + l1 <= traversable_len
-    def distance_constraint(t2_val):
-        pos_at_time = fixed_part + t2_val * robot_velocity
-        norm = np.linalg.norm(pos_at_time - q_point)
-        return norm + l1 <= traversable_len
+    # Define the quadratic constraint norm((fixed_part + t2 * robot_velocity) - q) + l1 <= traversable_len
+    new_position = fixed_part + t2 * robot_velocity
+    distance_squared = solver.Sum([(new_position[i] - q_point[i])**2 for i in range(len(q))])
+    solver.Add(distance_squared <= (traversable_len - l1) ** 2)
 
-    # Add distance constraint for solver
-    for t2_val in np.linspace(0, traversable_len, num=1000):
-        if distance_constraint(t2_val):
-            solver.Add(t2 >= t2_val)
-
-    # Solve
+    # Solve the problem
     status = solver.Solve()
 
-    # if status == pywraplp.Solver.OPTIMAL:
-    #     print('Solution:')
-    #     print('Objective value =', objective.Value())
-    #     print('t2 =', t2.solution_value())
-    # else:
-    #     print('The problem 2 does not have an optimal solution.')
-
-    return t2.solution_value()
-
+    if status == pywraplp.Solver.OPTIMAL:
+        print('[LOG]: t2 =', t2.solution_value())
+        return t2.solution_value()
+    else:
+        print('[LOG] WARNING: The problem does not have an optimal solution.')
+        return None
+    
 # # Example usage
 # robot_position = [0, 0]
 # robot_vel = [1, 1]
