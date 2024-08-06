@@ -32,6 +32,12 @@ drone = [Drone(i, init_pos=[0, 0, 0], average_vel=uav_avg_vel, battery_limit=uav
 def simulate_robot(start, goal, Kp_linear, Kp_angular, dt, max_steps):
     
     trajectory = [(robot.x, robot.y)]
+    drones_traj = [
+    {"positions": [(0, 0)]},  # Drone 0
+    {"positions": [(0, 0)]},  # Drone 1
+    {"positions": [(0, 0)]}   # Drone 2
+    ]
+
     task_list = []
     finished_task = []
 
@@ -51,6 +57,8 @@ def simulate_robot(start, goal, Kp_linear, Kp_angular, dt, max_steps):
         robot.update_position(v, omega, dt, env)
             
         for _drone in drone:
+
+            drones_traj[_drone.index]["positions"].append((_drone.position[0],_drone.position[1],_drone.position[2]))
 
             if _drone.state == DroneState.COMEBACK:
                 print('[LOG] drone', _drone.index, 'is comming back')
@@ -103,13 +111,13 @@ def simulate_robot(start, goal, Kp_linear, Kp_angular, dt, max_steps):
         if robot.at_goal and sum(1 for _drone in drone if _drone.state == DroneState.WAITING):
             break
     
-    return trajectory, task_list, finished_task
+    return trajectory, drones_traj, task_list, finished_task
 
 # Simulate the robot
-trajectory, task_list, finished_task = simulate_robot(start, goal, Kp_linear, Kp_angular, dt, max_steps)
+trajectory, drones_traj, task_list, finished_task = simulate_robot(start, goal, Kp_linear, Kp_angular, dt, max_steps)
 
 print('[LOG] Finished the simulation, number of unassigned task', len(robot.task), 'number of assigned task', len(robot.finished_task))
 
 # Plotting the trajectory as an animation using the TrajectoryPlotter class
-plotter = TrajectoryPlotter(trajectory, task_list, start, goal, finished_task)
+plotter = TrajectoryPlotter(trajectory, drones_traj, task_list, start, goal, finished_task)
 plotter.animate('robot_trajectory.gif', fps=5)

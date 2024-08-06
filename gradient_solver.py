@@ -1,5 +1,27 @@
 import numpy as np
 
+def optimizer1(task_set, current_node, robot_position, robot_vel, t_total, traversable_len):
+    # pass
+    def distance(a, b):
+        return np.linalg.norm(np.array(a)-np.array(b))
+
+    def check_feasibility(enode, cnode, pr, vr, t_total, traversable_len):
+        current_node = np.array(enode)
+        robot_position = np.array(pr)
+        robot_vel = np.array(vr)
+        return distance(current_node, cnode) + distance(cnode, (robot_position+robot_vel*t_total))  <= traversable_len
+
+    possibility = 0
+    pos = None
+
+    for i in range(len(task_set)):
+        if task_set[i][4] > possibility and check_feasibility(current_node,np.array(task_set[i][:3]),robot_position,robot_vel,t_total[i],traversable_len):
+            chosed_task = task_set[i][:3]
+            pos = i
+    if pos is None:
+        return [], None
+    return chosed_task, pos
+
 def optimize2_gradient_descent(q, l1, t1, robot_position, robot_vel, uav_vel, traversable_len, alpha=0.01, epsilon=1e-6, max_iterations=10000):
     # Initial guess for t2
     t2 = 100*t1

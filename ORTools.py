@@ -97,7 +97,7 @@ def optimize2(q, l1, t1, robot_position, robot_vel, uav_vel, traversable_len):
     status = solver.Solve()
 
     if status == pywraplp.Solver.OPTIMAL:
-        print('[LOG]: t2 =', t2.solution_value())
+        print('[LOG] t2 =', t2.solution_value())
         return t2.solution_value()
     else:
         print('[LOG] WARNING: The problem does not have an optimal solution.')

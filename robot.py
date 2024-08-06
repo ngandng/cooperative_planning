@@ -2,7 +2,7 @@ import numpy as np
 
 from config import *
 from gradient_solver import *
-from ORTools import *
+# from ORTools import *
 
 class DifferentialDriveRobot:
     def __init__(self, x, y, theta, vmax, sr):
@@ -20,6 +20,7 @@ class DifferentialDriveRobot:
         self.sensing_range = sr
 
         # avalable tasks
+        # information in task: x, y, z, priority value, probability value
         self.task = np.empty((0, 5))
         self.finished_task = np.empty((0, 5))
 
@@ -136,7 +137,7 @@ class DifferentialDriveRobot:
         # current_node = route[-1]
         current_node = np.array([self.x, self.y, self.z])
 
-        print('[LOG]: planning for drone: number of task set', len(self.task), 'traversable length', traversable_len)
+        print('[LOG] planning for drone: number of task set', len(self.task), 'traversable length', traversable_len)
 
         while traversable_len > 0 and len(self.task) > 0:
             next_node, pos = find_best_node(current_node, traversable_len, self.task, self.get_position(), self.vel, uav_vel)
@@ -205,15 +206,14 @@ def find_best_node(current_node, traversable_len, task_set, robot_position, robo
         t2 = optimize2_gradient_descent(q, l1, t1, robot_position, robot_vel, uav_vel, traversable_len)
 
         if t2 is None:
-            return None, None
-        
-        t_total[i] = t1+t2
+            # return None, None
+            t_total[i] = np.inf
+        else:
+            t_total[i] = t1+t2
     
     # after that, we can apply optimization solver to find best q
 
-    q_, position = optimize1(task_set, current_node, robot_position, robot_vel, t_total, traversable_len)
-
-    # print('Check q_', q_)
+    q_, position = optimizer1(task_set, current_node, robot_position, robot_vel, t_total, traversable_len)
 
     if q_ is None:
         return None, None

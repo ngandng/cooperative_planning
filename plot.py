@@ -4,8 +4,9 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 from mpl_toolkits.mplot3d import Axes3D
 
 class TrajectoryPlotter:
-    def __init__(self, trajectory, task_list, start, goal, finished_task):
+    def __init__(self, trajectory, drones_traj, task_list, start, goal, finished_task):
         self.trajectory = np.array(trajectory)
+        self.drones_traj = drones_traj
         self.task_list = task_list
         self.start = start
         self.goal = goal
