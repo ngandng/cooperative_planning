@@ -7,9 +7,17 @@ def optimizer1(task_set, current_node, robot_position, robot_vel, t_total, trave
 
     def check_feasibility(enode, cnode, pr, vr, t_total, traversable_len):
         current_node = np.array(enode)
+        candidate_node = np.array(cnode)
         robot_position = np.array(pr)
         robot_vel = np.array(vr)
-        return distance(current_node, cnode) + distance(cnode, (robot_position+robot_vel*t_total))  <= traversable_len
+        
+        if np.isinf(t_total):
+            return False
+        # Calculate new robot position after moving for t_total time
+        new_robot_position = robot_position + robot_vel * t_total
+        
+        # Check feasibility
+        return (distance(current_node, candidate_node) + distance(candidate_node, new_robot_position) <= traversable_len*0.9)
 
     possibility = 0
     pos = None
@@ -24,17 +32,13 @@ def optimizer1(task_set, current_node, robot_position, robot_vel, t_total, trave
 
 def optimize2_gradient_descent(q, l1, t1, robot_position, robot_vel, uav_vel, traversable_len, alpha=0.01, epsilon=1e-6, max_iterations=10000):
     # Initial guess for t2
-    t2 = 100*t1
+    t2 = traversable_len/uav_vel
 
     # Precompute constant parts of the constraint
     robot_pos = np.array(robot_position)
     robot_velocity = np.array(robot_vel)
     q_point = np.array(q)
     fixed_part = robot_pos + t1 * robot_velocity
-
-    # Objective function
-    def objective(t2):
-        return t2 * uav_vel
 
     # Gradient of the objective function
     def gradient(t2):
@@ -66,7 +70,7 @@ def optimize2_gradient_descent(q, l1, t1, robot_position, robot_vel, uav_vel, tr
             break
 
     if constraint(t2) > 0:
-        print('[LOG] WARNING OPTIMIZER2: The problem does not have an optimal solution.')
+        # print('[LOG] WARNING OPTIMIZER2: The problem does not have an optimal solution.')
         return None
     else:
         # print('[LOG]: t2 =', t2)

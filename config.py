@@ -30,9 +30,9 @@ robot_sensing_range = 20     #
 robot_vmax = 5
 robot_vmin = 1
 
-uav_max_range = 150          # maximum traveling distance of each uav
+uav_max_range = 100          # maximum traveling distance of each uav
 uav_min_range = 10           # minimum remaining battery that uav can consider taking new route
-uav_avg_vel = 10            # uav average velocity
+uav_avg_vel = 15            # uav average velocity
 
 epsilon = 0.5              # allowed distance of controller
 

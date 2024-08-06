@@ -43,8 +43,9 @@ def simulate_robot(start, goal, Kp_linear, Kp_angular, dt, max_steps):
 
     env = Environment()
 
+    count_for_break = 0
     for _i in range(max_steps):
-        print('[LOG] STEP', _i)
+        print('[LOG] STEP', _i, 'car position [%s,%s,%s]' %(robot.x,robot.y,robot.z))
         v, omega = calculate_control(robot, goal, Kp_linear, Kp_angular)
 
         if _i > 1:
@@ -61,7 +62,7 @@ def simulate_robot(start, goal, Kp_linear, Kp_angular, dt, max_steps):
             drones_traj[_drone.index]["positions"].append((_drone.position[0],_drone.position[1],_drone.position[2]))
 
             if _drone.state == DroneState.COMEBACK:
-                print('[LOG] drone', _drone.index, 'is comming back')
+                print('[LOG] drone', _drone.index, 'is comming back: position [%s,%s,%s]; battery state %s' % (_drone.position[0],_drone.position[1],_drone.position[2],_drone.battery))
                 # if drone is comming back, send robot position for drone
                 _drone.move_to_pos(robot.get_position())
                 if np.linalg.norm(_drone.position-robot.get_position()) < epsilon:
@@ -75,8 +76,11 @@ def simulate_robot(start, goal, Kp_linear, Kp_angular, dt, max_steps):
                 if _drone.check_battery() >= uav_min_range:
                     _drone.state = DroneState.WAITING
 
+            if _drone.state == DroneState.OUT_OF_CONTROL:
+                print('[LOG] IMPORTANT: Drone', _drone.index, 'is now run out of battery and crash !!!!!!!!!!!!!')
+
             # when drone is waiting
-            if _i > 10:
+            if _i > 5:
                 if _drone.state == DroneState.WAITING:
                     print('[LOG] drone', _drone.index, 'is waiting for the route')
                     robot.calculate_priority()
@@ -85,7 +89,7 @@ def simulate_robot(start, goal, Kp_linear, Kp_angular, dt, max_steps):
 
                     if plan:
                         _drone.set_route(plan)
-                        print("[LOG] New plan loaded on the drone", _drone.index)
+                        print("[LOG] New plan loaded on the drone", _drone.index, '. Number of task', len(plan))
                         _drone.state = DroneState.MOVING
 
             # when drone state is moving
@@ -108,15 +112,17 @@ def simulate_robot(start, goal, Kp_linear, Kp_angular, dt, max_steps):
         if np.linalg.norm([robot.x - goal[0], robot.y - goal[1]]) < epsilon:
             robot.at_goal = True
         
-        if robot.at_goal and sum(1 for _drone in drone if _drone.state == DroneState.WAITING):
-            break
+        if (robot.at_goal and sum(1 for _drone in drone if _drone.state == DroneState.WAITING)==3) or sum(1 for _drone in drone if _drone.state == DroneState.OUT_OF_CONTROL)==3:
+            count_for_break += 1
+            if count_for_break > 3:
+                break
     
     return trajectory, drones_traj, task_list, finished_task
 
 # Simulate the robot
 trajectory, drones_traj, task_list, finished_task = simulate_robot(start, goal, Kp_linear, Kp_angular, dt, max_steps)
 
-print('[LOG] Finished the simulation, number of unassigned task', len(robot.task), 'number of assigned task', len(robot.finished_task))
+print('[LOG] Finished the simulation, number of unassigned task', len(robot.task), 'number of assigned task', len(robot.finished_task), 'number of crashed drone', sum(1 for _drone in drone if _drone.state == DroneState.OUT_OF_CONTROL))
 
 # Plotting the trajectory as an animation using the TrajectoryPlotter class
 plotter = TrajectoryPlotter(trajectory, drones_traj, task_list, start, goal, finished_task)

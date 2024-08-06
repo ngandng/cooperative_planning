@@ -10,6 +10,8 @@ class DroneState(Enum):
     COMEBACK = 3
     CHARGING = 4
 
+    OUT_OF_CONTROL = 5
+
 class Drone:
     def __init__(self, id, init_pos, average_vel, battery_limit):
         self.index = id
@@ -44,7 +46,7 @@ class Drone:
 
         velocity = self.vel
 
-        if distance > 0:
+        if distance > epsilon:
             direction = direction / distance
             while distance < velocity:
                 velocity = velocity*0.9
@@ -53,6 +55,12 @@ class Drone:
             
             self.position = self.position + move_vec
             self.battery -= np.linalg.norm(move_vec)  # Decrease battery with movement
+
+        direction = np.array(target) - np.array(self.position)
+        distance = np.linalg.norm(direction)
+        if distance > epsilon and self.battery <= 0:
+                self.state = DroneState.OUT_OF_CONTROL
+
 
     def move(self):
         if self.current_target is None:

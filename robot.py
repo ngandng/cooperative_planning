@@ -13,7 +13,7 @@ class DifferentialDriveRobot:
         self.z = 0
         self.theta = theta
 
-        self.vel = []   # current velocity
+        self.vel = [0, 0, 0]   # current velocity
         
         # robot parameters
         self.vmax = vmax
@@ -129,6 +129,7 @@ class DifferentialDriveRobot:
         # print("Updated value for task set", self.task.shape)
 
     def plan_for_uav(self, uav_vel, uav_battery):
+
         if self.task.size == 0:
             return []  # No tasks to process, return an empty list
         
@@ -137,15 +138,24 @@ class DifferentialDriveRobot:
         # current_node = route[-1]
         current_node = np.array([self.x, self.y, self.z])
 
+        probot = np.array(self.get_position())    # position of robot when drone reach the last node
+        ttime = 0                                 # travel time of the route
+
         print('[LOG] planning for drone: number of task set', len(self.task), 'traversable length', traversable_len)
 
         while traversable_len > 0 and len(self.task) > 0:
-            next_node, pos = find_best_node(current_node, traversable_len, self.task, self.get_position(), self.vel, uav_vel)
+            probot += np.array(self.vel)*ttime    # update position of robot when drone reach the last node
+
+            next_node, pos = find_best_node(current_node, traversable_len, self.task, probot, self.vel, uav_vel)
 
             if next_node is not None and pos is not None:
+                travel_dis = np.linalg.norm(current_node - next_node)
+                ttravel = travel_dis/uav_vel
+
+                ttime += ttravel
                 route.append(next_node)
 
-                traversable_len -= np.linalg.norm(current_node - next_node)
+                traversable_len -= travel_dis
                 current_node = route[-1]
 
                 self.finished_task = np.vstack([self.finished_task, self.task[pos]])
@@ -201,8 +211,6 @@ def find_best_node(current_node, traversable_len, task_set, robot_position, robo
         l1 = np.linalg.norm(q - current_node)
         t1 = l1/uav_vel
 
-        # print('[LOG]: checking input of optimizer2: l1', l1, 't1', t1)
-        # t2 = optimize2(q, l1, t1, robot_position, robot_vel, uav_vel, traversable_len)
         t2 = optimize2_gradient_descent(q, l1, t1, robot_position, robot_vel, uav_vel, traversable_len)
 
         if t2 is None:
@@ -210,7 +218,7 @@ def find_best_node(current_node, traversable_len, task_set, robot_position, robo
             t_total[i] = np.inf
         else:
             t_total[i] = t1+t2
-    
+
     # after that, we can apply optimization solver to find best q
 
     q_, position = optimizer1(task_set, current_node, robot_position, robot_vel, t_total, traversable_len)
