@@ -54,11 +54,13 @@ class Drone:
             move_vec = direction * velocity
             
             self.position = self.position + move_vec
-            self.battery -= np.linalg.norm(move_vec)  # Decrease battery with movement
+            self.battery -= np.linalg.norm(move_vec)/uav_avg_vel  # Decrease battery with movement
+            # self.battery -= 1
 
         direction = np.array(target) - np.array(self.position)
         distance = np.linalg.norm(direction)
-        if distance > epsilon and self.battery <= 0:
+        if distance > epsilon*2 and self.battery <= 0:
+                print('\n [WARNING] OUT_OF_CONTROL: drone position [%s,%s,%s], distance to the GV %s \n'%(self.position[0],self.position[1],self.position[2], distance))
                 self.state = DroneState.OUT_OF_CONTROL
 
 

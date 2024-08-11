@@ -1,11 +1,12 @@
 import numpy as np
+from config import *
 
-def optimizer1(task_set, current_node, robot_position, robot_vel, t_total, traversable_len):
+def optimizer1(task_set, current_node, robot_position, robot_vel, t_total, traversable_time):
     # pass
     def distance(a, b):
         return np.linalg.norm(np.array(a)-np.array(b))
 
-    def check_feasibility(enode, cnode, pr, vr, t_total, traversable_len):
+    def check_feasibility(enode, cnode, pr, vr, t_total, traversable_time):
         current_node = np.array(enode)
         candidate_node = np.array(cnode)
         robot_position = np.array(pr)
@@ -17,22 +18,22 @@ def optimizer1(task_set, current_node, robot_position, robot_vel, t_total, trave
         new_robot_position = robot_position + robot_vel * t_total
         
         # Check feasibility
-        return (distance(current_node, candidate_node) + distance(candidate_node, new_robot_position) <= traversable_len*0.9)
+        return (distance(current_node, candidate_node) + distance(candidate_node, new_robot_position) <= traversable_time*uav_avg_vel)
 
     possibility = 0
     pos = None
 
     for i in range(len(task_set)):
-        if task_set[i][4] > possibility and check_feasibility(current_node,np.array(task_set[i][:3]),robot_position,robot_vel,t_total[i],traversable_len):
+        if task_set[i][4] > possibility and check_feasibility(current_node,np.array(task_set[i][:3]),robot_position,robot_vel,t_total[i],traversable_time):
             chosed_task = task_set[i][:3]
             pos = i
     if pos is None:
         return [], None
     return chosed_task, pos
 
-def optimize2_gradient_descent(q, l1, t1, robot_position, robot_vel, uav_vel, traversable_len, alpha=0.01, epsilon=1e-6, max_iterations=10000):
+def optimize2_gradient_descent(q, l1, t1, robot_position, robot_vel, uav_vel, traversable_time, alpha=0.01, epsilon=1e-6, max_iterations=10000):
     # Initial guess for t2
-    t2 = traversable_len/uav_vel
+    t2 = traversable_time
 
     # Precompute constant parts of the constraint
     robot_pos = np.array(robot_position)
@@ -45,9 +46,13 @@ def optimize2_gradient_descent(q, l1, t1, robot_position, robot_vel, uav_vel, tr
         return uav_vel
 
     # Constraint function
+    # def constraint(t2):
+    #     new_position = fixed_part + t2 * robot_velocity
+    #     return np.linalg.norm(new_position - q_point) + l1 - traversable_len
+    
     def constraint(t2):
         new_position = fixed_part + t2 * robot_velocity
-        return np.linalg.norm(new_position - q_point) + l1 - traversable_len
+        return np.linalg.norm(new_position - q_point) + l1 - (traversable_time)*uav_avg_vel*0.8
 
     # Gradient descent loop
     for _ in range(max_iterations):
