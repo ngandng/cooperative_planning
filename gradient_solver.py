@@ -20,11 +20,11 @@ def optimizer1(task_set, current_node, robot_position, robot_vel, t_total, trave
         # Check feasibility
         return (distance(current_node, candidate_node) + distance(candidate_node, new_robot_position) <= traversable_time*uav_avg_vel)
 
-    possibility = 0
+    priority = np.inf
     pos = None
 
     for i in range(len(task_set)):
-        if task_set[i][4] > possibility and check_feasibility(current_node,np.array(task_set[i][:3]),robot_position,robot_vel,t_total[i],traversable_time):
+        if task_set[i][3] < priority and check_feasibility(current_node,np.array(task_set[i][:3]),robot_position,robot_vel,t_total[i],traversable_time):
             chosed_task = task_set[i][:3]
             pos = i
     if pos is None:
@@ -36,23 +36,25 @@ def optimize2_gradient_descent(q, l1, t1, robot_position, robot_vel, uav_vel, tr
     t2 = traversable_time
 
     # Precompute constant parts of the constraint
-    robot_pos = np.array(robot_position)
-    robot_velocity = np.array(robot_vel)
-    q_point = np.array(q)
-    fixed_part = robot_pos + t1 * robot_velocity
+    pr = np.array(robot_position)
+    vr = np.array(robot_vel)
+    q = np.array(q)
+    pr_t1 = pr + t1 * vr
 
     # Gradient of the objective function
     def gradient(t2):
         return uav_vel
 
-    # Constraint function
-    # def constraint(t2):
-    #     new_position = fixed_part + t2 * robot_velocity
-    #     return np.linalg.norm(new_position - q_point) + l1 - traversable_len
-    
     def constraint(t2):
-        new_position = fixed_part + t2 * robot_velocity
-        return np.linalg.norm(new_position - q_point) + l1 - (traversable_time)*uav_avg_vel*0.8
+        z = q[2]
+        d2 = np.linalg.norm([q[0]-pr_t1[0],q[1]-pr_t1[1]]) + np.linalg.norm(t2*robot_vmax)
+        d1 = z
+        max_dis = np.sqrt(d1**2 + d2**2)
+        return max_dis - traversable_time*uav_avg_vel
+    
+    # def constraint(t2):
+    #     new_position = pr_t1 + t2 * vr
+    #     return np.linalg.norm(new_position - q) + l1 - (traversable_time)*uav_avg_vel*0.8
 
     # Gradient descent loop
     for _ in range(max_iterations):

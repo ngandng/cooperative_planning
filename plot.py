@@ -15,12 +15,12 @@ class TrajectoryPlotter:
         self.goal = goal
         self.finished = finished_task
 
-        self.fig = plt.figure()
+        self.fig = plt.figure(1)
         self.ax = self.fig.add_subplot(111, projection='3d')
         self.line, = self.ax.plot([], [], [], 'b-', label='Robot Trajectory')
         self.start_marker, = self.ax.plot([], [], [], 'bo', label='Start')
         self.goal_marker, = self.ax.plot([], [], [], 'ro', label='Goal')
-        self.robot_circle, = self.ax.plot([], [], [], 'yo', label='Robot', markersize=20)
+        self.robot_circle, = self.ax.plot([], [], [], 'yo', label='Robot', markersize=15)
         self.robot_direction, = self.ax.plot([], [], [], 'r-')
         
         # Separate scatter plots for tasks and finished tasks
@@ -95,8 +95,9 @@ class TrajectoryPlotter:
         ani.save(filename, writer=PillowWriter(fps=fps))
         # plt.show()
 
-    def plot_drone_lines(self, filename='dronelines.png'):
-        fig = plt.figure(figsize=(10, 8))
+    def plot_drone_lines(self, filename1='dronelines.png',filename2='batterylog.png'):
+        ## Plot for drones path
+        fig = plt.figure(2,figsize=(10, 8))
         ax = fig.add_subplot(111, projection='3d')
 
         # Flatten the task list and finished task list
@@ -139,15 +140,13 @@ class TrajectoryPlotter:
         # Change the viewpoint
         ax.view_init(elev=30, azim=-60)  # Adjust the elevation and azimuth as needed
 
-        if filename:
-            plt.savefig(filename)
+        if filename1:
+            plt.savefig(filename1)
 
         plt.show()
 
-    def plot_battery_info(self, filename='battery_log.png'):
-        fig = plt.figure()
-
-
+        # plot for drones battery
+        plt.figure(3)
         for i, drone in enumerate(self.drones_info):
             drone_battery = drone["battery"]  # Assuming this is a list of battery levels over time
             time_steps = range(len(drone_battery))  # Create a list of time steps
@@ -155,8 +154,24 @@ class TrajectoryPlotter:
 
         # Set plot labels and legend
         plt.xlabel('Time step')
-        plt.ylabel('Drone battery state (%)')
+        plt.ylabel('Drone battery state (min(s))')
         plt.title('Drones Battery Log')
+        plt.legend()
+        plt.grid(True)
+
+        if filename2:
+            plt.savefig(filename2)
+
+        plt.show()
+
+    def plot_robot_vel(self,robot_vel, filename = 'robot_vel.png'):
+        plt.figure()
+
+        timesteps = range(len(robot_vel))
+        plt.plot(timesteps, robot_vel, linestyle='-', linewidth=2, label=f'GV_vel')
+
+        plt.xlabel('Time step')
+        plt.ylabel('Velocity of Ground Vehicle')
         plt.legend()
         plt.grid(True)
 
@@ -164,3 +179,4 @@ class TrajectoryPlotter:
             plt.savefig(filename)
 
         plt.show()
+

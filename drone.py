@@ -28,14 +28,16 @@ class Drone:
         # operating states
         self.current_target = None
 
-    def check_battery(self):
-        return self.battery
+        self.count_for_charging = 1
 
     def set_route(self, route):
         self.route = route
 
     def charge(self, battery_limit):
-        self.battery = battery_limit
+        newbat = battery_limit*(1-self.count_for_charging)
+        if self.battery < newbat:
+            self.battery = newbat
+        self.count_for_charging -= 1
 
     def has_tasks(self):
         return bool(self.route)
@@ -60,7 +62,7 @@ class Drone:
         direction = np.array(target) - np.array(self.position)
         distance = np.linalg.norm(direction)
         if distance > epsilon*2 and self.battery <= 0:
-                print('\n [WARNING] OUT_OF_CONTROL: drone position [%s,%s,%s], distance to the GV %s \n'%(self.position[0],self.position[1],self.position[2], distance))
+                print('\n[WARNING] OUT_OF_CONTROL: drone %s position [%s,%s,%s], distance to the GV %s \n'%(self.index,self.position[0],self.position[1],self.position[2], distance))
                 self.state = DroneState.OUT_OF_CONTROL
 
 
@@ -71,7 +73,7 @@ class Drone:
             del self.route[0]
 
         # check whether drone reach the current goal
-        dis2tar = np.linalg.norm(self.position-self.current_target)
+        dis2tar = np.linalg.norm(np.array(self.position)-np.array(self.current_target))
         # print('Drone ', self.index, 'checking distance to target ', dis2tar)
         if dis2tar < epsilon:
             if len(self.route)>=1:
