@@ -20,10 +20,13 @@ def two_opt(route):
     for i in range(1, len(route) - 2):
         for j in range(i + 1, len(route) - 1):
             # Create a new route by reversing the order of nodes between i and j
-            new_route = route[:i] + route[i:j+1][::-1] + route[j+1:]
-            new_cost = calculate_total_distance(new_route)
+            # new_cost = calculate_total_distance(new_route)
+            new_cost = best_cost+distance(route[i-1],route[j])+distance(route[i],route[j+1])-distance(route[i-1],route[i])-distance(route[j],route[j+1])
             
             if new_cost < best_cost:
+                # remove edges (i-1,i) and (j,j+1), add edges (i-1,j) and (i,j+1)
+                new_route = route[:i] + route[i:j+1][::-1] + route[j+1:]
+
                 best_route = new_route
                 best_cost = new_cost
                 # improved = True

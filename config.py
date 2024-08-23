@@ -15,20 +15,19 @@ class Environment:
         self.zmin = Z_MIN
 
 # Parameters
-start = (0, 0, np.pi/4)     # Starting position (x, y, theta)
-goal = (200, 200)             # Goal position (x, y)
+start = (0, 0, 0)     # Starting position (x, y, theta)
 
 Kp_linear = 1.0             # Proportional gain for linear velocity
-Kp_angular = 2.0            # Proportional gain for angular velocity
+Kp_angular = 1.0            # Proportional gain for angular velocity
 
 dt = 1                      # Time step
 
-max_steps = 200              # Maximum number of simulation steps
+max_steps = 400              # Maximum number of simulation steps
 
 robot_radius = 0.2          # Radius of the robot circle
 robot_sensing_range = 20     # 
 robot_vmax = 5
-robot_vmin = 0.05
+robot_vmin = 2
 
 uav_max_time = 15          # maximum traveling distance of each uav
 # uav_min_range = 10           # minimum remaining battery that uav can consider taking new route

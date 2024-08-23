@@ -22,6 +22,7 @@ from robot import *
 from drone import *
 from config import *
 from plot import *
+from robot_trajectory import *
 
 # define the robot
 robot = DifferentialDriveRobot(start[0], start[1], start[2], vmax=robot_vmax, sr=robot_sensing_range)
@@ -32,10 +33,10 @@ drone = [Drone(i, init_pos=[0, 0, 0], average_vel=uav_avg_vel, battery_limit=uav
 # some metrics for evaluation
 total_route = 0     # total number of route assign for drones 
 
-def simulate_robot(start, goal, Kp_linear, Kp_angular, dt, max_steps):
+def simulate_robot(start, goals, Kp_linear, Kp_angular, dt, max_steps):
     
     # saving information for plot
-    trajectory = [(robot.x, robot.y, 0)]
+    robot_state = [(robot.x, robot.y, 0, robot.theta)]
     robot_vel = []
     drones_info = [
     {"positions": [(0, 0, 0)], "battery": [uav_max_time]},  # Drone 0
@@ -49,11 +50,12 @@ def simulate_robot(start, goal, Kp_linear, Kp_angular, dt, max_steps):
     # working metrics
     env = Environment()
     count_for_break = 0
+    current_goal_in = 0     # index of current target on list of target
 
     """Loop of system operation"""
     for _i in range(max_steps):
         # print('[LOG] STEP', _i, 'car position [%s,%s,%s]' %(robot.x,robot.y,robot.z))
-        v, omega = robot.calculate_control(goal, Kp_linear, Kp_angular)
+        v, omega, current_goal_in = robot.calculate_control(current_goal_in, goals, Kp_linear, Kp_angular)
 
         if _i > 1:
             robot.calculate_priority()
@@ -101,7 +103,7 @@ def simulate_robot(start, goal, Kp_linear, Kp_angular, dt, max_steps):
                         _drone.set_route(plan)
                         global total_route
                         total_route += 1
-                        print("[LOG] New plan loaded on the drone", _drone.index, '. Number of task', len(plan))
+                        print("[LOG] New plan loaded on the drone", _drone.index, '. Number of task', len(plan)-1)
                         _drone.state = DroneState.MOVING
 
             # when drone state is moving
@@ -110,21 +112,24 @@ def simulate_robot(start, goal, Kp_linear, Kp_angular, dt, max_steps):
                 if current_target is not None:
                     print('[LOG] drone', _drone.index, 'is moving to [%s, %s, %s]' % (current_target[0], current_target[1], current_target[2]))
         
-        trajectory.append((robot.x, robot.y, 0))
+        robot_state.append((robot.x, robot.y, 0, robot.theta))
         robot_vel.append(v)
         task_list.append(robot.task)
         finished_task.append(robot.finished_task)
         
-        if ((robot.at_goal and sum(1 for _drone in drone if _drone.state==DroneState.WAITING or _drone.state==DroneState.OUT_OF_CONTROL)==3)) or sum(1 for _drone in drone if _drone.state == DroneState.OUT_OF_CONTROL)==3:
+        if ((robot.at_goal and sum(1 for _drone in drone if _drone.state==DroneState.WAITING or _drone.state==DroneState.OUT_OF_CONTROL)==3)):
             count_for_break += 1
-            if count_for_break > 3:
+            if count_for_break > 5:
                 break
 
-    return trajectory, robot_vel, drones_info, task_list, finished_task
+    return robot_state, robot_vel, drones_info, task_list, finished_task
 
 def main():
+
+    goals = np.array(straight_line())
+
     # Simulate the robot
-    trajectory, vr, drones_info, task_list, finished_task = simulate_robot(start, goal, Kp_linear, Kp_angular, dt, max_steps)
+    robot_state, vr, drones_info, task_list, finished_task = simulate_robot(start, goals, Kp_linear, Kp_angular, dt, max_steps)
 
     print('[FINISH LOG] Finished the simulation, number of unassigned task', len(robot.task), 'number of assigned task', len(robot.finished_task), 'number of crashed drone', sum(1 for _drone in drone if _drone.state == DroneState.OUT_OF_CONTROL))
     print('Number of route for drones', total_route)
@@ -132,7 +137,7 @@ def main():
     for _drone in drone:
         print('Drone', _drone.index, 'state', _drone.state)
     # Plotting the trajectory as an animation using the TrajectoryPlotter class
-    plotter = TrajectoryPlotter(trajectory, drones_info, task_list, start, goal, finished_task)
+    plotter = TrajectoryPlotter(robot_state, drones_info, task_list, start, goals, finished_task)
     plotter.plot_drone_lines()
     plotter.plot_robot_vel(vr)
     # plotter.plot_battery_info()

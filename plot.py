@@ -7,19 +7,19 @@ from mpl_toolkits.mplot3d import Axes3D
 colors = ['purple', 'orange', 'cyan']
 
 class TrajectoryPlotter:
-    def __init__(self, trajectory, drones_info, task_list, start, goal, finished_task):
-        self.trajectory = np.array(trajectory)
+    def __init__(self, robot_state, drones_info, task_list, start, goals, finished_task):
+        self.robot_state = np.array(robot_state)
         self.drones_info = drones_info
         self.task_list = task_list
         self.start = start
-        self.goal = goal
+        self.goals = np.array(goals)
         self.finished = finished_task
 
         self.fig = plt.figure(1)
         self.ax = self.fig.add_subplot(111, projection='3d')
         self.line, = self.ax.plot([], [], [], 'b-', label='Robot Trajectory')
         self.start_marker, = self.ax.plot([], [], [], 'bo', label='Start')
-        self.goal_marker, = self.ax.plot([], [], [], 'ro', label='Goal')
+        self.goals_scatter = self.ax.scatter([], [], [], c='r', marker='x', label='Goals', s=50)
         self.robot_circle, = self.ax.plot([], [], [], 'yo', label='Robot', markersize=15)
         self.robot_direction, = self.ax.plot([], [], [], 'r-')
         
@@ -30,8 +30,8 @@ class TrajectoryPlotter:
         self._init_plot()
 
     def _init_plot(self):
-        self.ax.set_xlim((min(self.trajectory[:, 0]) - 1, max(self.trajectory[:, 0]) + 1))
-        self.ax.set_ylim((min(self.trajectory[:, 1]) - 1, max(self.trajectory[:, 1]) + 1))
+        self.ax.set_xlim((min(self.robot_state[:, 0]) - 1, max(self.robot_state[:, 0]) + 1))
+        self.ax.set_ylim((min(self.robot_state[:, 1]) - 1, max(self.robot_state[:, 1]) + 1))
         self.ax.set_zlim(0, 30)
         self.ax.set_xlabel('X')
         self.ax.set_ylabel('Y')
@@ -43,25 +43,30 @@ class TrajectoryPlotter:
     def init(self):
         self.line.set_data_3d([], [], [])
         self.start_marker.set_data_3d([self.start[0]], [self.start[1]], [0])
-        self.goal_marker.set_data_3d([self.goal[0]], [self.goal[1]], [0])
         self.robot_circle.set_data_3d([self.start[0]], [self.start[1]], [0])
         self.robot_direction.set_data_3d([], [], [])
+
+        # Initialize goal points scatter plot
+        if len(self.goals) > 0:
+            self.goals_scatter._offsets3d = (self.goals[:, 0], self.goals[:, 1], self.goals[:, 2])
+        else:
+            self.goals_scatter._offsets3d = ([], [], [])
         
         self.task_scatter._offsets3d = ([], [], [])
         self.finished_scatter._offsets3d = ([], [], [])
         
-        return (self.line, self.start_marker, self.goal_marker, self.robot_circle, 
+        return (self.line, self.start_marker, self.goals_scatter, self.robot_circle, 
                 self.robot_direction, self.task_scatter, self.finished_scatter)
 
     def update_frame(self, frame):
-        self.line.set_data_3d(self.trajectory[:frame, 0], self.trajectory[:frame, 1], np.zeros(frame))
-        self.robot_circle.set_data_3d([self.trajectory[frame, 0]], [self.trajectory[frame, 1]], [0])
+        self.line.set_data_3d(self.robot_state[:frame, 0], self.robot_state[:frame, 1], np.zeros(frame))
+        self.robot_circle.set_data_3d([self.robot_state[frame, 0]], [self.robot_state[frame, 1]], [0])
 
         direction_length = 10.0
-        direction_x = self.trajectory[frame, 0] + direction_length * np.cos(self.start[2])
-        direction_y = self.trajectory[frame, 1] + direction_length * np.sin(self.start[2])
-        self.robot_direction.set_data_3d([self.trajectory[frame, 0], direction_x],
-                                         [self.trajectory[frame, 1], direction_y],
+        direction_x = self.robot_state[frame, 0] + direction_length * np.cos(self.robot_state[frame,3])
+        direction_y = self.robot_state[frame, 1] + direction_length * np.sin(self.robot_state[frame,3])
+        self.robot_direction.set_data_3d([self.robot_state[frame, 0], direction_x],
+                                         [self.robot_state[frame, 1], direction_y],
                                          [0, 0])
 
         # Update task scatter plot
@@ -86,11 +91,11 @@ class TrajectoryPlotter:
             else:
                 self.finished_scatter._offsets3d = ([], [], [])
 
-        return (self.line, self.start_marker, self.goal_marker, self.robot_circle, 
+        return (self.line, self.start_marker, self.goals_scatter, self.robot_circle, 
                 self.robot_direction, self.task_scatter, self.finished_scatter)
 
     def animate(self, filename='robot_trajectory.gif', fps=10):
-        ani = FuncAnimation(self.fig, self.update_frame, frames=len(self.trajectory), 
+        ani = FuncAnimation(self.fig, self.update_frame, frames=len(self.robot_state), 
                             init_func=self.init, blit=True, repeat=False)
         ani.save(filename, writer=PillowWriter(fps=fps))
         # plt.show()
@@ -117,12 +122,12 @@ class TrajectoryPlotter:
         ax.scatter(tasks_x, tasks_y, tasks_z, c='b', marker='o', label='Tasks')
 
         # Plot robot trajectory
-        robot_x, robot_y, robot_z = zip(*self.trajectory[:, :3])
+        robot_x, robot_y, robot_z = zip(*self.robot_state[:, :3])
         ax.plot(robot_x, robot_y, robot_z, c='r', linestyle='-', linewidth=2, label='Robot Trajectory')
 
         # Plot start and goal
         ax.scatter(*self.start[:3], c='green', marker='s', s=100, label='Start')
-        ax.scatter(*self.goal[:3], c='red', marker='s', s=100, label='Goal')
+        ax.scatter(self.goals[:,0],self.goals[:,1],self.goals[:,2], c='red', marker='x', s=50, label='Goals')
 
         for i, drone in enumerate(self.drones_info):
             drone_positions = drone["positions"]
