@@ -126,7 +126,7 @@ def simulate_robot(goals, dt, max_steps):
 
 def main():
 
-    goals = np.array(circular_path())
+    goals = np.array(straight_line())
 
     # Simulate the robot
     robot_state, vr, drones_info, task_list, finished_task = simulate_robot(goals, dt, max_steps)

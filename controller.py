@@ -1,7 +1,7 @@
 import numpy as np
 from config import *
 
-def robot_controller(robot, current_goal):
+def simple_controller(robot, current_goal):
     dx = current_goal[0] - robot.x
     dy = current_goal[1] - robot.y
     distance_error = np.sqrt(dx**2 + dy**2)

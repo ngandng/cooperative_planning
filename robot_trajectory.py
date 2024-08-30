@@ -28,5 +28,46 @@ def circular_path(n=10, r=70, center=(0, 0, 0)):
 
     return np.array(points)
 
-def curve_line():
-    pass
+def u_curve(start=start):
+    
+    points = []
+
+    d = 500  # distance between 2 edges of u-curve
+    l = 200  # length of 2 edges of u-curve
+
+    n = 30  # total number of waypoints
+
+    # straight line of u-curve
+    for i in range (int(n/3)):
+        new_wp = [0, 0, 0]
+        new_wp[0] = start[0]
+        new_wp[1] = start[1] + i*l/(n/3)
+        new_wp[2] = 0
+
+        points.append(new_wp)
+
+    # the curve part
+    xc = start[0] + d/2
+    yc = start[1] + l
+    zc = 0
+    
+    angles = np.linspace(np.pi, 0, int(n/3), endpoint=False)
+    r = d/2
+    
+    for angle in angles:
+        x = r * np.cos(angle) + xc
+        y = r * np.sin(angle) + yc
+        z = zc
+        points.append([x, y, z])
+
+    # the other straight line    
+    for i in range (int(n/3)):
+        new_wp = [0, 0, 0]
+        new_wp[0] = start[0] + d
+        new_wp[1] = start[1] + (l - i*l/(n/3))
+        new_wp[2] = 0
+
+        points.append(new_wp)
+
+    return points
+

@@ -15,7 +15,7 @@ class DifferentialDriveRobot:
         # current angular state
         self.theta = theta
 
-        self.vel = [0, 0, 0]   # current velocity
+        self.vel = [0, 0, 0]   # current velocity [speed, omega, 0]
         
         # robot parameters
         self.vmax = vmax
@@ -133,7 +133,17 @@ class DifferentialDriveRobot:
         current_node = np.array(route[-1])
 
         probot = np.array(self.get_position())    # position of robot when drone reach the last node
-        vrobot = self.vel
+
+        vel = self.vel[0]
+
+        if vel <= 0:
+            vel = 0.0001
+        
+        vx = vel * np.cos(self.theta)
+        vy = vel * np.sin(self.theta)
+
+        vrobot = np.array([vx, vy, 0])
+
         ttime = 0                                 # travel time of the route
 
         avai_tasks = self.task
@@ -143,7 +153,7 @@ class DifferentialDriveRobot:
         while traversable_time > 0 and len(avai_tasks) > 0:
             probot += np.array(vrobot)*ttime    # update position of robot when drone reach the last node
 
-            next_node, pos = find_best_node(current_node, traversable_time, avai_tasks, probot, self.vel, uav_vel)
+            next_node, pos = find_best_node(current_node, traversable_time, avai_tasks, probot, vrobot, uav_vel)
 
             if next_node is not None and pos is not None:
                 travel_dis = np.linalg.norm(current_node - next_node)
@@ -175,7 +185,7 @@ class DifferentialDriveRobot:
                 self.finished_task = np.vstack([self.finished_task, self.task[i_pos]])
                 self.task = np.delete(self.task, i_pos, axis=0)
 
-            route, new_cost = tsp(route)
+            route, new_cost = tsp(route, probot)
 
         return route
     
@@ -193,42 +203,6 @@ class DifferentialDriveRobot:
         vnew = max(min(vnew, robot_vmax), robot_vmin)
         
         return vnew
-
-
-    # def calculate_control(self, current_goal_index, goals, Kp_linear, Kp_angular):
-    #     # Calculate the error in position
-    #     goal = goals[current_goal_index]
-
-    #     dx = goal[0] - self.x
-    #     dy = goal[1] - self.y
-    #     distance_error = np.sqrt(dx**2 + dy**2)
-
-    #     if distance_error <= epsilon and self.at_goal == False:
-    #         if current_goal_index < len(goals)-1:
-    #             current_goal_index += 1
-    #         else:
-    #             self.at_goal = True
-        
-    #     # Calculate the desired orientation
-    #     desired_theta = np.arctan2(dy, dx)
-        
-    #     # Calculate the error in orientation
-    #     orientation_error = desired_theta - self.theta
-        
-    #     # Normalize the orientation error to be within -pi to pi
-    #     orientation_error = np.arctan2(np.sin(orientation_error), np.cos(orientation_error))
-        
-    #     # Proportional control for linear and angular velocities
-    #     v = Kp_linear * distance_error
-    #     omega = Kp_angular * orientation_error
-
-    #     if v>self.vmax:
-    #         v = self.vmax
-
-    #     if self.at_goal:
-    #         return 0, 0, current_goal_index
-        
-    #     return v, omega, current_goal_index
     
     def calculate_control(self, current_goal_index, goals):
 
@@ -246,8 +220,10 @@ class DifferentialDriveRobot:
 
 def find_best_node(current_node, traversable_time, task_set, robot_position, robot_vel, uav_vel):
 
-    # argmax        probabilites(q)
-    # subject to    distance(current_node,q)+distance(q,new_robot) < traversable_len
+    """ argmax        probabilites(q)
+        subject to    distance(current_node,q)+distance(q,new_robot) < traversable_len  """
+    
+    # Note that robot_vel here has to be [vx, vy, vz]
 
     # first find the new_robot position for each point q
     t_total = np.zeros(len(task_set))
