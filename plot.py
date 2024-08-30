@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, PillowWriter
-from mpl_toolkits.mplot3d import Axes3D
 
 # Define colors for the drones
 colors = ['purple', 'orange', 'cyan']
@@ -159,7 +158,7 @@ class TrajectoryPlotter:
 
         # Set plot labels and legend
         plt.xlabel('Time step')
-        plt.ylabel('Drone battery state (min(s))')
+        plt.ylabel('Drone battery state (%)')
         plt.title('Drones Battery Log')
         plt.legend()
         plt.grid(True)

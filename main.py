@@ -33,15 +33,15 @@ drone = [Drone(i, init_pos=[0, 0, 0], average_vel=uav_avg_vel, battery_limit=uav
 # some metrics for evaluation
 total_route = 0     # total number of route assign for drones 
 
-def simulate_robot(start, goals, Kp_linear, Kp_angular, dt, max_steps):
+def simulate_robot(goals, dt, max_steps):
     
     # saving information for plot
     robot_state = [(robot.x, robot.y, 0, robot.theta)]
     robot_vel = []
     drones_info = [
-    {"positions": [(0, 0, 0)], "battery": [uav_max_time]},  # Drone 0
-    {"positions": [(0, 0, 0)], "battery": [uav_max_time]},  # Drone 1
-    {"positions": [(0, 0, 0)], "battery": [uav_max_time]}   # Drone 2
+    {"positions": [(0, 0, 0)], "battery": [100]},  # Drone 0
+    {"positions": [(0, 0, 0)], "battery": [100]},  # Drone 1
+    {"positions": [(0, 0, 0)], "battery": [100]}   # Drone 2
     ]
 
     task_list = []
@@ -55,7 +55,7 @@ def simulate_robot(start, goals, Kp_linear, Kp_angular, dt, max_steps):
     """Loop of system operation"""
     for _i in range(max_steps):
         # print('[LOG] STEP', _i, 'car position [%s,%s,%s]' %(robot.x,robot.y,robot.z))
-        v, omega, current_goal_in = robot.calculate_control(current_goal_in, goals, Kp_linear, Kp_angular)
+        v, omega, current_goal_in = robot.calculate_control(current_goal_in, goals)
 
         if _i > 1:
             robot.calculate_priority()
@@ -69,7 +69,7 @@ def simulate_robot(start, goals, Kp_linear, Kp_angular, dt, max_steps):
         for _drone in drone:
 
             drones_info[_drone.index]["positions"].append((_drone.position[0],_drone.position[1],_drone.position[2]))
-            drones_info[_drone.index]["battery"].append(_drone.battery)
+            drones_info[_drone.index]["battery"].append(_drone.battery/uav_max_time*100)
 
             if _drone.state == DroneState.COMEBACK:
                 print('[LOG] drone', _drone.index, 'is comming back: position [%s,%s,%s]; battery state %s' % (_drone.position[0],_drone.position[1],_drone.position[2],_drone.battery))
@@ -126,10 +126,10 @@ def simulate_robot(start, goals, Kp_linear, Kp_angular, dt, max_steps):
 
 def main():
 
-    goals = np.array(straight_line())
+    goals = np.array(circular_path())
 
     # Simulate the robot
-    robot_state, vr, drones_info, task_list, finished_task = simulate_robot(start, goals, Kp_linear, Kp_angular, dt, max_steps)
+    robot_state, vr, drones_info, task_list, finished_task = simulate_robot(goals, dt, max_steps)
 
     print('[FINISH LOG] Finished the simulation, number of unassigned task', len(robot.task), 'number of assigned task', len(robot.finished_task), 'number of crashed drone', sum(1 for _drone in drone if _drone.state == DroneState.OUT_OF_CONTROL))
     print('Number of route for drones', total_route)

@@ -17,8 +17,12 @@ class Environment:
 # Parameters
 start = (0, 0, 0)     # Starting position (x, y, theta)
 
-Kp_linear = 1.0             # Proportional gain for linear velocity
-Kp_angular = 1.0            # Proportional gain for angular velocity
+Kp_linear = 0.8             # Proportional gain for linear velocity
+Kp_angular = 0.8            # Proportional gain for angular velocity
+Ki_linear = 0
+Ki_angular = 0
+Kd_linear = 0.08
+Kd_angular = 0.08
 
 dt = 1                      # Time step
 
@@ -33,6 +37,6 @@ uav_max_time = 15          # maximum traveling distance of each uav
 # uav_min_range = 10           # minimum remaining battery that uav can consider taking new route
 uav_avg_vel = 15            # uav average velocity
 
-epsilon = 0.5              # allowed distance of controller
+epsilon = 3              # allowed distance of controller
 
 num_drones = 3

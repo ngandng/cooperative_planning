@@ -3,6 +3,7 @@ import numpy as np
 from config import *
 from gradient_solver import *
 from tsp import tsp
+from controller import *
 
 class DifferentialDriveRobot:
     def __init__(self, x, y, theta, vmax, sr):
@@ -25,6 +26,12 @@ class DifferentialDriveRobot:
         self.task = np.empty((0, 4))
         self.finished_task = np.empty((0, 4))
         self.missed_task = np.empty((0, 4))
+
+        # PID parameters
+        self.linear_integral = 0
+        self.angular_integral = 0
+        self.previous_linear_error = 0
+        self.previous_angular_error = 0
 
         self.at_goal = False
 
@@ -62,7 +69,8 @@ class DifferentialDriveRobot:
             Here each step just add 1 or 0 new task. We can add more
             """
             # task = [x, y, z]
-            z = np.random.uniform(env.zmax-20, env.zmax)
+            # z = np.random.uniform(env.zmax-20, env.zmax)
+            z = env.zmax
 
             dis = np.random.rand()*self.sensing_range
             sen_angle = np.random.uniform(-np.pi/2,np.pi/2)
@@ -187,39 +195,53 @@ class DifferentialDriveRobot:
         return vnew
 
 
-    def calculate_control(self, current_goal_index, goals, Kp_linear, Kp_angular):
-        # Calculate the error in position
-        goal = goals[current_goal_index]
+    # def calculate_control(self, current_goal_index, goals, Kp_linear, Kp_angular):
+    #     # Calculate the error in position
+    #     goal = goals[current_goal_index]
 
-        dx = goal[0] - self.x
-        dy = goal[1] - self.y
-        distance_error = np.sqrt(dx**2 + dy**2)
+    #     dx = goal[0] - self.x
+    #     dy = goal[1] - self.y
+    #     distance_error = np.sqrt(dx**2 + dy**2)
 
-        if distance_error <= epsilon and self.at_goal == False:
-            if current_goal_index < len(goals)-1:
-                current_goal_index += 1
-            else:
-                self.at_goal = True
+    #     if distance_error <= epsilon and self.at_goal == False:
+    #         if current_goal_index < len(goals)-1:
+    #             current_goal_index += 1
+    #         else:
+    #             self.at_goal = True
         
-        # Calculate the desired orientation
-        desired_theta = np.arctan2(dy, dx)
+    #     # Calculate the desired orientation
+    #     desired_theta = np.arctan2(dy, dx)
         
-        # Calculate the error in orientation
-        orientation_error = desired_theta - self.theta
+    #     # Calculate the error in orientation
+    #     orientation_error = desired_theta - self.theta
         
-        # Normalize the orientation error to be within -pi to pi
-        orientation_error = np.arctan2(np.sin(orientation_error), np.cos(orientation_error))
+    #     # Normalize the orientation error to be within -pi to pi
+    #     orientation_error = np.arctan2(np.sin(orientation_error), np.cos(orientation_error))
         
-        # Proportional control for linear and angular velocities
-        v = Kp_linear * distance_error
-        omega = Kp_angular * orientation_error
+    #     # Proportional control for linear and angular velocities
+    #     v = Kp_linear * distance_error
+    #     omega = Kp_angular * orientation_error
 
-        if v>self.vmax:
-            v = self.vmax
+    #     if v>self.vmax:
+    #         v = self.vmax
 
-        if self.at_goal:
+    #     if self.at_goal:
+    #         return 0, 0, current_goal_index
+        
+    #     return v, omega, current_goal_index
+    
+    def calculate_control(self, current_goal_index, goals):
+
+        current_goal = goals[current_goal_index]
+        
+        v, omega = PID_controller(self,current_goal)
+
+        if self.at_goal and current_goal_index >= len(goals)-1:
             return 0, 0, current_goal_index
-        
+        else:
+            if self.at_goal:
+                current_goal_index += 1
+                self.at_goal = False
         return v, omega, current_goal_index
 
 def find_best_node(current_node, traversable_time, task_set, robot_position, robot_vel, uav_vel):
