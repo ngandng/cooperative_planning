@@ -3,10 +3,10 @@ from config import *
 
 
 def straight_line():
-    goal = [[400, 200,0]]             # Goal position (x, y)
+    goal = [[10000, 10000,0]]             # Goal position (x, y)
     return goal
 
-def circular_path(n=10, r=70, center=(0, 0, 0)):
+def circular_path(n=10, r=1000, center=(0, 0, 0)):
     """
     Generate n points on a circular path.
     n: Number of points to generate.
@@ -32,8 +32,8 @@ def u_curve(start=start):
     
     points = []
 
-    d = 500  # distance between 2 edges of u-curve
-    l = 200  # length of 2 edges of u-curve
+    d = 5000  # distance between 2 edges of u-curve
+    l = 20000  # length of 2 edges of u-curve
 
     n = 30  # total number of waypoints
 

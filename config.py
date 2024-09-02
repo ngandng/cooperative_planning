@@ -1,9 +1,9 @@
 import numpy as np
 
 # Define the environment
-X_MIN = 0; X_MAX = 100
-Y_MIN = 0; Y_MAX = 100
-Z_MIN = 0; Z_MAX = 30
+X_MIN = 0; X_MAX = 1000
+Y_MIN = 0; Y_MAX = 1000
+Z_MIN = 0; Z_MAX = 300
 
 class Environment:
     def __init__(self):
@@ -26,17 +26,18 @@ Kd_angular = 0.08
 
 dt = 1                      # Time step
 
-max_steps = 400              # Maximum number of simulation steps
+max_steps = 400             # Maximum number of simulation steps
 
 robot_radius = 0.2          # Radius of the robot circle
-robot_sensing_range = 20     # 
-robot_vmax = 5
-robot_vmin = 2
+robot_sensing_range = 20    # 
+robot_vmax = 8              # average speed of GV, to set as normal speed (m/s)
+robot_vmin = 3              # minimum bound for GV speed
+robot_acceleration = 2      # 
 
-uav_max_time = 15          # maximum traveling distance of each uav
-# uav_min_range = 10           # minimum remaining battery that uav can consider taking new route
-uav_avg_vel = 15            # uav average velocity
+uav_max_time = 30*60        # maximum traveling time of each uav (second)
+# uav_min_range = 10        # minimum remaining battery that uav can consider taking new route
+uav_avg_vel = 15            # uav average velocity (m/s)
 
-epsilon = 3              # allowed distance of controller
+epsilon = 3                 # allowed distance of controller (m)
 
-num_drones = 3
+num_drones = 3              # number of drone in simulation

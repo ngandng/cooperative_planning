@@ -197,7 +197,7 @@ class DifferentialDriveRobot:
         pos = sum(1 for task in self.task if task[3] > 0)
 
         A = (pos - neg) / len(self.task)
-        vnew = v - v * A
+        vnew = v - robot_acceleration * A
         
         # Ensure vnew stays within [robot_vmin, robot_vmax]
         vnew = max(min(vnew, robot_vmax), robot_vmin)
