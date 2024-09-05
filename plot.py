@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, PillowWriter
 
+from config import save_file
 # Define colors for the drones
 colors = ['purple', 'orange', 'cyan']
 
@@ -61,7 +62,7 @@ class TrajectoryPlotter:
         self.line.set_data_3d(self.robot_state[:frame, 0], self.robot_state[:frame, 1], np.zeros(frame))
         self.robot_circle.set_data_3d([self.robot_state[frame, 0]], [self.robot_state[frame, 1]], [0])
 
-        direction_length = 10.0
+        direction_length = 150
         direction_x = self.robot_state[frame, 0] + direction_length * np.cos(self.robot_state[frame,3])
         direction_y = self.robot_state[frame, 1] + direction_length * np.sin(self.robot_state[frame,3])
         self.robot_direction.set_data_3d([self.robot_state[frame, 0], direction_x],
@@ -96,7 +97,8 @@ class TrajectoryPlotter:
     def animate(self, filename='robot_trajectory.gif', fps=10):
         ani = FuncAnimation(self.fig, self.update_frame, frames=len(self.robot_state), 
                             init_func=self.init, blit=True, repeat=False)
-        ani.save(filename, writer=PillowWriter(fps=fps))
+        if save_file:
+            ani.save(filename, writer=PillowWriter(fps=fps))
         # plt.show()
 
     def plot_drone_lines(self, filename1='dronelines.png',filename2='batterylog.png'):
@@ -131,7 +133,7 @@ class TrajectoryPlotter:
         for i, drone in enumerate(self.drones_info):
             drone_positions = drone["positions"]
             drone_x, drone_y, drone_z = zip(*[(pos[0], pos[1], pos[2]) for pos in drone_positions])
-            ax.plot(drone_x, drone_y, drone_z, linestyle='-', linewidth=1.5, label=f'Drone {i}', color=colors[i % len(colors)])
+            ax.plot(drone_x, drone_y, drone_z, linestyle='--', linewidth=1, label=f'Drone {i}', color=colors[i % len(colors)])
 
         # Set plot labels and legend
         ax.set_xlabel('X-coordinate')
@@ -144,7 +146,7 @@ class TrajectoryPlotter:
         # Change the viewpoint
         ax.view_init(elev=30, azim=-60)  # Adjust the elevation and azimuth as needed
 
-        if filename1:
+        if filename1 and save_file:
             plt.savefig(filename1)
 
         plt.show()
@@ -163,7 +165,7 @@ class TrajectoryPlotter:
         plt.legend()
         plt.grid(True)
 
-        if filename2:
+        if filename2 and save_file:
             plt.savefig(filename2)
 
         plt.show()
@@ -179,7 +181,7 @@ class TrajectoryPlotter:
         plt.legend()
         plt.grid(True)
 
-        if filename:
+        if filename and save_file:
             plt.savefig(filename)
 
         plt.show()

@@ -4,6 +4,7 @@ from config import *
 from gradient_solver import *
 from tsp import tsp
 from controller import *
+from forload import sense_task_from_file
 
 class DifferentialDriveRobot:
     def __init__(self, x, y, theta, vmax, sr):
@@ -47,12 +48,16 @@ class DifferentialDriveRobot:
         self.vel = [v, omega, 0]
 
         if not self.at_goal:
-            self.sense_new_task(env)
+            if env.load_file:
+                sense_task_from_file(env,self)
+            else:
+                self.sense_new_task(env)
 
     def get_position(self):
         return [self.x, self.y, 0]
         
     def add_task(self, new_task):
+        print('Robot found a new task. Number of task currently', len(self.task))
         new_task = np.array(new_task).reshape(1, 4)
         self.task = np.vstack([self.task, new_task])
         
@@ -60,7 +65,7 @@ class DifferentialDriveRobot:
         # based on robot.x, robot.y and robot.theta, gen a new task
 
         """PARAMETER: modify the number bellow to decide density of the tasks"""
-        if(np.random.rand()<0.5):
+        if(np.random.rand()<0.2):
             """
             The task position is randomly generated
             within the robot's sensing range and within
@@ -81,7 +86,7 @@ class DifferentialDriveRobot:
             task = np.array([x, y, z, 0])
 
             # print('Add task at location ',x,y,z)
-            self.add_task(task)   
+            self.add_task(task)  
 
     def calculate_priority(self, v=None):
         p = np.array([self.x, self.y, self.z])
@@ -151,9 +156,9 @@ class DifferentialDriveRobot:
         # print('[LOG] planning for drone: number of task set', len(self.task), 'traversable time', traversable_time)
         """Plan a route for drone"""
         while traversable_time > 0 and len(avai_tasks) > 0:
-            probot += np.array(vrobot)*ttime    # update position of robot when drone reach the last node
+            # probot += np.array(vrobot)*ttime    # update position of robot when drone reach the last node
 
-            next_node, pos = find_best_node(current_node, traversable_time, avai_tasks, probot, vrobot, uav_vel)
+            next_node, pos = find_best_node(current_node, traversable_time, avai_tasks, probot, vrobot, ttime, uav_vel)
 
             if next_node is not None and pos is not None:
                 travel_dis = np.linalg.norm(current_node - next_node)
@@ -171,12 +176,13 @@ class DifferentialDriveRobot:
                 break
         
         """ decide whether publish the route for drone or just wait for more tasks """
-        cummdis = 0     # cummulative distance of the route but different with route length
+        cummdis = 0                     # cummulative distance of the route but different with route length
         for i in range(1,len(route)):   # skip the first node cause it is the robot position
-            cummdis += np.sign(self.task[pos_node[1]][3]) * np.linalg.norm(probot-route[i])
-            # cummdis += np.linalg.norm(probot-route[i])
+            # here cummdis prioritize the route that have node with possitive priority value
+            # cummdis += -np.sign(self.task[pos_node[i]][3]) * np.linalg.norm(self.get_position()-route[i])
+            cummdis += np.linalg.norm(self.get_position()-route[i])
         
-        if cummdis < (uav_max_time/(2*(len(route)-1)+1)) and not self.at_goal:
+        if cummdis*(2*(len(route)-1)+1) < (uav_max_time*uav_avg_vel) and not self.at_goal:
             return []
         else:
             # if the route is large enough, publish it by apply tsp optimize first
@@ -185,7 +191,10 @@ class DifferentialDriveRobot:
                 self.finished_task = np.vstack([self.finished_task, self.task[i_pos]])
                 self.task = np.delete(self.task, i_pos, axis=0)
 
-            route, new_cost = tsp(route, probot)
+                print('\n We assigned a task', self.finished_task[-1,-1], 'with the cummulative distance ', cummdis )
+
+            predict_p = probot+ttime*vrobot
+            route, new_cost = tsp(route, predict_p)
 
         return route
     
@@ -218,7 +227,7 @@ class DifferentialDriveRobot:
                 self.at_goal = False
         return v, omega, current_goal_index
 
-def find_best_node(current_node, traversable_time, task_set, robot_position, robot_vel, uav_vel):
+def find_best_node(current_node, traversable_time, task_set, robot_position, robot_vel, ttime, uav_vel):
 
     """ argmax        probabilites(q)
         subject to    distance(current_node,q)+distance(q,new_robot) < traversable_len  """
@@ -233,13 +242,13 @@ def find_best_node(current_node, traversable_time, task_set, robot_position, rob
         l1 = np.linalg.norm(q - current_node)
         t1 = l1/uav_vel
 
-        t2 = optimize2_gradient_descent(q, l1, t1, robot_position, robot_vel, uav_vel, traversable_time)
+        t2 = optimize2_gradient_descent(q, l1, t1, robot_position, robot_vel, ttime, uav_vel, traversable_time)
 
         if t2 is None:
             # return None, None
             t_total[i] = np.inf
         else:
-            t_total[i] = t1+t2
+            t_total[i] = t1+t2+ttime
 
     # after that, we can apply optimization solver to find best q
 

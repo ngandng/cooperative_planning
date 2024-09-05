@@ -22,42 +22,44 @@ from robot import *
 from drone import *
 from config import *
 from plot import *
-from robot_trajectory import *
+# from robot_trajectory import *
+
+
+env = Environment('stra1.txt')
 
 # define the robot
-robot = DifferentialDriveRobot(start[0], start[1], start[2], vmax=robot_vmax, sr=robot_sensing_range)
+robot = DifferentialDriveRobot(env.START[0],env.START[1],env.START[2],vmax=robot_vmax,sr=env.sensing_range)
 
 #define the drones
-drone = [Drone(i, init_pos=[0, 0, 0], average_vel=uav_avg_vel, battery_limit=uav_max_time) for i in range(num_drones)]
+drone = [Drone(i, init_pos=env.START, average_vel=uav_avg_vel, battery_limit=env.uav_max_time) for i in range(num_drones)]
 
 # some metrics for evaluation
 total_route = 0     # total number of route assign for drones 
 
-def simulate_robot(goals, dt, max_steps):
+def simulate_robot(dt, max_steps):
     
     # saving information for plot
     robot_state = [(robot.x, robot.y, 0, robot.theta)]
     robot_vel = []
     drones_info = [
-    {"positions": [(0, 0, 0)], "battery": [100]},  # Drone 0
-    {"positions": [(0, 0, 0)], "battery": [100]},  # Drone 1
-    {"positions": [(0, 0, 0)], "battery": [100]}   # Drone 2
+    {"positions": [env.START], "battery": [100]},  # Drone 0
+    {"positions": [env.START], "battery": [100]},  # Drone 1
+    {"positions": [env.START], "battery": [100]}   # Drone 2
     ]
 
     task_list = []
     finished_task = []
 
     # working metrics
-    env = Environment()
     count_for_break = 0
-    current_goal_in = 0     # index of current target on list of target
+    current_goal_index = 0     # index of current target on list of target
 
     """Loop of system operation"""
-    for _i in range(max_steps):
-        # print('[LOG] STEP', _i, 'car position [%s,%s,%s]' %(robot.x,robot.y,robot.z))
-        v, omega, current_goal_in = robot.calculate_control(current_goal_in, goals)
+    for iter in range(max_steps):
+        print('[LOG] STEP', iter)
+        v, omega, current_goal_index = robot.calculate_control(current_goal_index, env.GOAL)
 
-        if _i > 1:
+        if iter > 1:
             robot.calculate_priority()
 
             if (len(robot.task)>0):
@@ -69,7 +71,7 @@ def simulate_robot(goals, dt, max_steps):
         for _drone in drone:
 
             drones_info[_drone.index]["positions"].append((_drone.position[0],_drone.position[1],_drone.position[2]))
-            drones_info[_drone.index]["battery"].append(_drone.battery/uav_max_time*100)
+            drones_info[_drone.index]["battery"].append(_drone.battery/env.uav_max_time*100)
 
             if _drone.state == DroneState.COMEBACK:
                 print('[LOG] drone', _drone.index, 'is comming back: position [%s,%s,%s]; battery state %s' % (_drone.position[0],_drone.position[1],_drone.position[2],_drone.battery))
@@ -80,10 +82,10 @@ def simulate_robot(goals, dt, max_steps):
 
             if _drone.state == DroneState.CHARGING:
                 print('[LOG] drone', _drone.index, 'is charging')
-                _drone.charge(uav_max_time)
+                _drone.charge(env.uav_max_time)
 
                 # wait for charge until drone full of battery
-                if _drone.battery >= uav_max_time*0.8:
+                if _drone.battery >= env.uav_max_time*0.8:
                     _drone.state = DroneState.WAITING
 
             if _drone.state == DroneState.OUT_OF_CONTROL:
@@ -91,10 +93,10 @@ def simulate_robot(goals, dt, max_steps):
                 pass
 
             # when drone is waiting
-            if _i > 5:
+            if iter > 5:
                 if _drone.state == DroneState.WAITING:
                     _drone.count_for_charging = 1
-                    print('[LOG] drone', _drone.index, 'is waiting for the route')
+                    # print('[LOG] drone', _drone.index, 'is waiting for the route')
                     robot.calculate_priority()
                     plan = robot.plan_for_uav(_drone.vel,_drone.battery)
                     _drone.position = robot.get_position()
@@ -105,6 +107,8 @@ def simulate_robot(goals, dt, max_steps):
                         total_route += 1
                         print("[LOG] New plan loaded on the drone", _drone.index, '. Number of task', len(plan)-1)
                         _drone.state = DroneState.MOVING
+
+                        count_for_break = 0
 
             # when drone state is moving
             if _drone.state == DroneState.MOVING:
@@ -126,22 +130,30 @@ def simulate_robot(goals, dt, max_steps):
 
 def main():
 
-    goals = np.array(straight_line())
+    # goals = np.array(circular_path())
 
     # Simulate the robot
-    robot_state, vr, drones_info, task_list, finished_task = simulate_robot(goals, dt, max_steps)
+    robot_state, vr, drones_info, task_list, finished_task = simulate_robot(dt, max_steps)
 
     print('[FINISH LOG] Finished the simulation, number of unassigned task', len(robot.task), 'number of assigned task', len(robot.finished_task), 'number of crashed drone', sum(1 for _drone in drone if _drone.state == DroneState.OUT_OF_CONTROL))
     print('Number of route for drones', total_route)
     print('[FINISH LOG] Drones state')
     for _drone in drone:
         print('Drone', _drone.index, 'state', _drone.state)
+
+    
+    print('Checking unassigned the task list:')
+    for task in robot.task:
+        print('Position ', task[0:3], 'priority value', task[-1])
+
     # Plotting the trajectory as an animation using the TrajectoryPlotter class
-    plotter = TrajectoryPlotter(robot_state, drones_info, task_list, start, goals, finished_task)
+    plotter = TrajectoryPlotter(robot_state, drones_info, task_list, env.START, env.GOAL, finished_task)
     plotter.plot_drone_lines()
     plotter.plot_robot_vel(vr)
-    # plotter.plot_battery_info()
-    plotter.animate('robot_trajectory.gif', fps=5)
+    # plotter.plot_batteryiternfo()
+    if save_file:
+        plotter.animate('robot_trajectory.gif', fps=15)
+
 
 if __name__ == "__main__":
     main()
