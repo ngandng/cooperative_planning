@@ -1,5 +1,5 @@
 import numpy as np
-import config
+import os
 
 def load_txt(filename):
     data = {}
@@ -7,7 +7,7 @@ def load_txt(filename):
     goals = []
     reading_goals = False
 
-    with open(filename, 'r') as file:
+    with open(os.path.join('test_data',filename), 'r') as file:
         lines = file.readlines()
         
         for line in lines:
