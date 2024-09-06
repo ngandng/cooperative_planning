@@ -54,7 +54,7 @@ def optimize2_gradient_descent(q, l1, t1, robot_position, robot_vel, ttime, uav_
         d2 = np.linalg.norm([q[0]-pr[0],q[1]-pr[1]]) + np.linalg.norm((ttime+t1+t2)*robot_vmax)
         d1 = z
         max_dis = np.sqrt(d1**2 + d2**2)
-        return max_dis - (ttime+t1+t2)*uav_avg_vel
+        return max_dis - (traversable_time)*uav_avg_vel
 
     # Gradient descent loop
     for _ in range(max_iterations):

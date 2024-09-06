@@ -35,7 +35,7 @@ epsilon = 3                 # allowed distance of controller (m)
 
 num_drones = 3              # number of drone in simulation
 
-save_file = False
+save_file = True
 
 class Environment:
     def __init__(self, filename):

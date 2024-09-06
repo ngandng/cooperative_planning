@@ -25,7 +25,7 @@ from plot import *
 # from robot_trajectory import *
 
 
-env = Environment('stra1.txt')
+env = Environment('cir1.txt')
 
 # define the robot
 robot = DifferentialDriveRobot(env.START[0],env.START[1],env.START[2],vmax=robot_vmax,sr=env.sensing_range)
@@ -154,6 +154,7 @@ def main():
     if save_file:
         plotter.animate('robot_trajectory.gif', fps=15)
 
+    print('Check the plotter. Number of available task ', len(robot.task), 'number of finished tasks', len(robot.finished_task))
 
 if __name__ == "__main__":
     main()

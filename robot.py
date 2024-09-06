@@ -26,7 +26,6 @@ class DifferentialDriveRobot:
         # information in task: x, y, z, priority value, probability value
         self.task = np.empty((0, 4))
         self.finished_task = np.empty((0, 4))
-        self.missed_task = np.empty((0, 4))
 
         # PID parameters
         self.linear_integral = 0
@@ -137,7 +136,7 @@ class DifferentialDriveRobot:
         
         current_node = np.array(route[-1])
 
-        probot = np.array(self.get_position())    # position of robot when drone reach the last node
+        probot = np.array(self.get_position())          # position of robot when drone reach the last node
 
         vel = self.vel[0]
 
@@ -149,7 +148,7 @@ class DifferentialDriveRobot:
 
         vrobot = np.array([vx, vy, 0])
 
-        ttime = 0                                 # travel time of the route
+        ttime = 0                                       # travel time of the route
 
         avai_tasks = self.task
 
