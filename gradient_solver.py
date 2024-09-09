@@ -11,14 +11,21 @@ def optimizer1(task_set, current_node, robot_position, robot_vel, t_total, trave
         candidate_node = np.array(cnode)
         robot_position = np.array(pr)
         robot_vel = np.array(vr)
-        
+        value_rvel = np.linalg.norm(robot_vel)
+        # Step 2: Normalize the vector
+        robot_vel_normalized = robot_vel / value_rvel
+
+        # Step 3: Scale the vector to the desired length
+        robot_vel_new = robot_vel_normalized * robot_vmax
+
         if np.isinf(t_total):
             return False
         # Calculate new robot position after moving for t_total time
-        new_robot_position = robot_position + robot_vel * t_total
+        new_robot_position = robot_position + robot_vel_new * t_total
         
         # Check feasibility
-        return (distance(current_node, candidate_node) + distance(candidate_node, new_robot_position) < traversable_time*uav_avg_vel)
+        return True
+        # return (distance(current_node, candidate_node) + distance(candidate_node, new_robot_position) < traversable_time*uav_avg_vel)
 
     priority = -np.inf
     pos = None
@@ -41,7 +48,6 @@ def optimize2_gradient_descent(q, l1, t1, robot_position, robot_vel, ttime, uav_
 
     # Precompute constant parts of the constraint
     pr = np.array(robot_position)
-    vr = np.array(robot_vel)
     q = np.array(q)
     # pr_t1 = pr + t1 * vr
 
@@ -50,9 +56,8 @@ def optimize2_gradient_descent(q, l1, t1, robot_position, robot_vel, ttime, uav_
         return uav_vel
 
     def constraint(t2):
-        z = q[2]
-        d2 = np.linalg.norm([q[0]-pr[0],q[1]-pr[1]]) + np.linalg.norm((ttime+t1+t2)*robot_vmax)
-        d1 = z
+        d2 = np.linalg.norm([q[0]-pr[0],q[1]-pr[1]]) + (ttime+t1+t2)*robot_vmax
+        d1 = q[2]
         max_dis = np.sqrt(d1**2 + d2**2)
         return max_dis - (traversable_time)*uav_avg_vel
 
@@ -68,7 +73,7 @@ def optimize2_gradient_descent(q, l1, t1, robot_position, robot_vel, ttime, uav_
         
         # Check if the new t2 satisfies the constraint
         t2 = t2_new
-        if constraint(t2_new) < 0:
+        if constraint(t2) < 0:
             # print('[LOG]: found t2', t2)
             break            
         
