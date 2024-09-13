@@ -181,7 +181,9 @@ class DifferentialDriveRobot:
             # cummdis += -np.sign(self.task[pos_node[i]][3]) * np.linalg.norm(self.get_position()-route[i])
             cummdis += np.linalg.norm(self.get_position()-route[i])
         
-        if cummdis*(2*(len(route)-1)+1) < (uav_max_time*uav_avg_vel) and not self.at_goal:
+        # if cummdis*(2*(len(route)-1)+2*(robot_vmax/(uav_avg_vel-robot_vmax)+1)) < (uav_max_time*uav_avg_vel) and not self.at_goal:
+        if cummdis*(4+2*(robot_vmax/(uav_avg_vel-robot_vmax))) < (uav_max_time*uav_avg_vel) and not self.at_goal:
+            # print('Not enough to form a route')
             return []
         else:
             # if the route is large enough, publish it by apply tsp optimize first
@@ -190,7 +192,7 @@ class DifferentialDriveRobot:
                 self.finished_task = np.vstack([self.finished_task, self.task[i_pos]])
                 self.task = np.delete(self.task, i_pos, axis=0)
 
-                print('\n We assigned a task', self.finished_task[-1,-1], 'with the cummulative distance ', cummdis )
+                # print('\n We assigned a task', self.finished_task[-1,-1], 'with the cummulative distance ', cummdis )
 
             predict_p = probot+ttime*vrobot
             route, new_cost = tsp(route, predict_p)

@@ -25,7 +25,7 @@ from plot import *
 # from robot_trajectory import *
 
 
-env = Environment('cir1.txt')
+env = Environment(filename)
 
 # define the robot
 robot = DifferentialDriveRobot(env.START[0],env.START[1],env.START[2],vmax=robot_vmax,sr=env.sensing_range)
@@ -85,7 +85,7 @@ def simulate_robot(dt, max_steps):
                 _drone.charge(env.uav_max_time)
 
                 # wait for charge until drone full of battery
-                if _drone.battery >= env.uav_max_time*0.8:
+                if _drone.battery >= env.uav_max_time:
                     _drone.state = DroneState.WAITING
 
             if _drone.state == DroneState.OUT_OF_CONTROL:

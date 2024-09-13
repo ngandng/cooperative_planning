@@ -26,16 +26,17 @@ robot_vmax = 8              # average speed of GV, to set as normal speed (m/s)
 robot_vmin = 3              # minimum bound for GV speed
 robot_acceleration = 2      # 
 
-uav_max_time = 200          # maximum traveling time of each uav (second)
-# uav_min_range = 10        # minimum remaining battery that uav can consider taking new route
-uav_avg_vel = 15            # uav average velocity (m/s)
+uav_max_time = 15*60          # maximum traveling time of each uav (second)
+uav_avg_vel = 12            # uav average velocity (m/s)
 """Means that UAV can travel around uav_max_time*uav_avg_vel meters. Change that in case of small scenario"""
 
-epsilon = 3                 # allowed distance of controller (m)
+epsilon = 30                 # allowed distance of controller (m)
 
 num_drones = 3              # number of drone in simulation
 
 save_file = False
+
+filename = 'cir1.txt'
 
 class Environment:
     def __init__(self, filename):

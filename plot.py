@@ -120,27 +120,28 @@ class TrajectoryPlotter:
             tasks_x, tasks_y, tasks_z = [], [], []
 
         # Plot task positions
-        ax.scatter(tasks_x, tasks_y, tasks_z, c='b', marker='o', label='Tasks')
+        ax.scatter(tasks_x, tasks_y, tasks_z, c='b',s=70, marker='o')
 
         # Plot robot trajectory
         robot_x, robot_y, robot_z = zip(*self.robot_state[:, :3])
-        ax.plot(robot_x, robot_y, robot_z, c='r', linestyle='-', linewidth=2, label='Robot Trajectory')
+        ax.plot(robot_x, robot_y, robot_z, c='r', linestyle='-', linewidth=4)
 
         # Plot start and goal
-        ax.scatter(*self.start[:3], c='green', marker='s', s=100, label='Start')
-        ax.scatter(self.goals[:,0],self.goals[:,1],self.goals[:,2], c='red', marker='x', s=50, label='Goals')
+        ax.scatter(*self.start[:3], c='green', marker='s', s=300)
+        ax.scatter(self.goals[:,0],self.goals[:,1],self.goals[:,2], c='red', marker='x', s=70)
 
         for i, drone in enumerate(self.drones_info):
             drone_positions = drone["positions"]
             drone_x, drone_y, drone_z = zip(*[(pos[0], pos[1], pos[2]) for pos in drone_positions])
-            ax.plot(drone_x, drone_y, drone_z, linestyle='--', linewidth=1, label=f'Drone {i}', color=colors[i % len(colors)])
+            ax.plot(drone_x, drone_y, drone_z, linestyle='--', linewidth=2, label=f'Drone {i}', color=colors[i % len(colors)])
 
         # Set plot labels and legend
-        ax.set_xlabel('X-coordinate')
-        ax.set_ylabel('Y-coordinate')
-        ax.set_zlabel('Z-coordinate')
-        ax.set_title('Trajectory Plot')
-        ax.legend()
+        ax.set_xlabel('X',fontsize=18)
+        ax.set_ylabel('Y',fontsize=18)
+        ax.set_zlabel('Z',fontsize=18)
+        # ax.set_title('Trajectory Plot')
+        ax.tick_params(axis='both', labelsize=16)
+        ax.legend(fontsize=18, loc='upper left', bbox_to_anchor=(0.05, 1), borderaxespad=0.)
         ax.grid(True)
 
         # Change the viewpoint
@@ -151,19 +152,57 @@ class TrajectoryPlotter:
 
         plt.show()
 
+
+        ## 2D Plot (XY plane)
+        plt.figure(5)  # Create a new figure and subplot
+
+        # Plot task positions (2D)
+        plt.scatter(tasks_x, tasks_y, c='b', s=70, marker='o')
+
+        # Plot robot trajectory (2D)
+        plt.plot(robot_x, robot_y, c='r', linestyle='-', linewidth=4)
+
+        # Plot start and goal (2D)
+        plt.scatter(self.start[0], self.start[1], c='green', marker='s', s=300)
+        plt.scatter(self.goals[:, 0], self.goals[:, 1], c='red', marker='x', s=70)
+
+        # Plot drones' paths (2D)
+        for i, drone in enumerate(self.drones_info):
+            drone_positions = drone["positions"]
+            drone_x, drone_y = zip(*[(pos[0], pos[1]) for pos in drone_positions])  # 2D (XY only)
+            plt.plot(drone_x, drone_y, linestyle='--', linewidth=2, label=f'Drone {i}', color=colors[i % len(colors)])
+
+        # Set plot labels and legend (2D)
+        plt.xlabel('X',fontsize=18)
+        plt.ylabel('Y',fontsize=18)
+        # plt.set_title('2D XY Trajectory Plot')
+        plt.legend(fontsize=18)
+        plt.grid(True)
+        plt.xticks(fontsize = 16) 
+        plt.yticks(fontsize = 16) 
+
+        # Show plot
+        plt.show()
+
+        # Save the figure if needed
+        if save_file:
+            plt.savefig('droneline_2d.png')
+
         # plot for drones battery
         plt.figure(3)
         for i, drone in enumerate(self.drones_info):
             drone_battery = drone["battery"]  # Assuming this is a list of battery levels over time
             time_steps = range(len(drone_battery))  # Create a list of time steps
-            plt.plot(time_steps, drone_battery, linestyle='-', linewidth=2, label=f'Drone {i}', color=colors[i % len(colors)])
+            plt.plot(time_steps, drone_battery, linestyle='-', linewidth=4, label=f'Drone {i}', color=colors[i % len(colors)])
 
         # Set plot labels and legend
-        plt.xlabel('Time step')
-        plt.ylabel('Drone battery state (%)')
-        plt.title('Drones Battery Log')
-        plt.legend()
+        plt.xlabel('Time step',fontsize=18)
+        plt.ylabel('Drone battery state (%)',fontsize=18)
+        plt.title('Drones Battery Log',fontsize=18)
+        plt.legend(fontsize=18)
         plt.grid(True)
+        plt.xticks(fontsize = 16) 
+        plt.yticks(fontsize = 16) 
 
         if filename2 and save_file:
             plt.savefig(filename2)
@@ -176,10 +215,12 @@ class TrajectoryPlotter:
         timesteps = range(len(robot_vel))
         plt.plot(timesteps, robot_vel, linestyle='-', linewidth=2, label=f'GV_vel')
 
-        plt.xlabel('Time step')
-        plt.ylabel('Velocity of Ground Vehicle')
-        plt.legend()
+        plt.xlabel('Time step',fontsize=18)
+        plt.ylabel('Velocity of Ground Vehicle',fontsize=18)
+        plt.legend(fontsize=18)
         plt.grid(True)
+        plt.xticks(fontsize = 16) 
+        plt.yticks(fontsize = 16) 
 
         if filename and save_file:
             plt.savefig(filename)

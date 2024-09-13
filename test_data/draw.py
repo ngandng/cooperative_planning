@@ -43,17 +43,17 @@ def read_and_plot(filename):
     plt.figure(figsize=(12, 10))
     
     # Plot nodes
-    plt.scatter(x_coords, y_coords, color='blue', label='Nodes')
+    plt.scatter(x_coords, y_coords, s=70,color='blue', label='Nodes')
     
     # Plot goals
-    plt.scatter(goal_x_coords, goal_y_coords, color='red', marker='x', label='Goals')
+    plt.scatter(goal_x_coords, goal_y_coords, color='red')
 
     # Connect goals with lines
     if len(goals) > 1:
         for i in range(len(goals) - 1):
             x_values = [goals[i][0], goals[i + 1][0]]
             y_values = [goals[i][1], goals[i + 1][1]]
-            plt.plot(x_values, y_values, color='red', linestyle='-', linewidth=2)
+            plt.plot(x_values, y_values, color='red', linestyle='-', linewidth=4)
 
     # Plot start goal as a green rectangle
     if goals:
@@ -61,11 +61,13 @@ def read_and_plot(filename):
         plt.scatter(start_goal[0], start_goal[1], color='green', marker='s', s=300, label='Start')
 
 
-    plt.xlabel('X Coordinate')
-    plt.ylabel('Y Coordinate')
-    plt.title('U-curve path')
-    plt.legend()
-    plt.grid(True)
+    plt.xlabel('X',fontsize=18)
+    plt.ylabel('Y',fontsize=18)
+    plt.title('U-curve path',fontsize=18)
+    plt.legend(fontsize=18)
+    plt.grid()
+    plt.xticks(fontsize = 16) 
+    plt.yticks(fontsize = 16) 
     plt.show()
 
 

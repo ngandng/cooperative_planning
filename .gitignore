@@ -1,0 +1,5 @@
+__pycache__/
+.vscode/
+read_coordinate/
+result/
+test_data/
